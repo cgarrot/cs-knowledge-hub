@@ -46,7 +46,7 @@ export async function* streamChat(
   messages: ChatMessage[],
   options: LLMOptions = {}
 ): AsyncGenerator<string> {
-  const { temperature = 0.7, maxTokens = 2048, topP = 0.9 } = options;
+  const { temperature = 0.7, maxTokens = 4096, topP = 0.9 } = options;
 
   try {
     const response = await fetch(`${OLLAMA_BASE_URL}/chat/completions`, {

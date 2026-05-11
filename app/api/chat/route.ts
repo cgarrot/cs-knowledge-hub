@@ -136,24 +136,37 @@ export async function POST(request: NextRequest) {
 
     // Stream response
     const encoder = new TextEncoder();
+    let closed = false;
     const stream = new ReadableStream({
       async start(controller) {
         try {
           for await (const chunk of streamChat(llmMessages)) {
+            if (closed) return;
             const data = JSON.stringify({ content: chunk });
             controller.enqueue(encoder.encode(`data: ${data}\n\n`));
           }
-          controller.enqueue(encoder.encode("data: [DONE]\n\n"));
-          controller.close();
+          if (!closed) {
+            controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+            controller.close();
+            closed = true;
+          }
         } catch (error) {
           console.error("[chat] Stream error:", error);
-          const errorData = JSON.stringify({
-            content: "An error occurred during streaming.",
-          });
-          controller.enqueue(encoder.encode(`data: ${errorData}\n\n`));
-          controller.enqueue(encoder.encode("data: [DONE]\n\n"));
-          controller.close();
+          if (!closed) {
+            try {
+              const errorData = JSON.stringify({
+                content: "An error occurred during streaming.",
+              });
+              controller.enqueue(encoder.encode(`data: ${errorData}\n\n`));
+              controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+            } catch {}
+            controller.close();
+            closed = true;
+          }
         }
+      },
+      cancel() {
+        closed = true;
       },
     });
 

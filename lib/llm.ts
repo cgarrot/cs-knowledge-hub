@@ -1,12 +1,12 @@
 /**
- * ZAI API (Ollama Cloud) LLM integration for chat responses.
+ * Ollama Cloud LLM integration for chat responses.
  * Supports streaming SSE responses using the OpenAI-compatible API format.
  */
 
-const ZAI_BASE_URL =
-  process.env.ZAI_BASE_URL || "https://api.z.ai/api/paas/v4";
-const ZAI_API_KEY = process.env.ZAI_API_KEY || process.env.GLM_API_KEY || "";
-const ZAI_MODEL = process.env.ZAI_MODEL || "glm-5.1";
+const OLLAMA_BASE_URL =
+  process.env.OLLAMA_BASE_URL || "https://ollama.com/v1";
+const OLLAMA_API_KEY = process.env.OLLAMA_API_KEY || "";
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "glm-5.1";
 
 export interface ChatMessage {
   role: "system" | "user" | "assistant";
@@ -49,14 +49,14 @@ export async function* streamChat(
   const { temperature = 0.7, maxTokens = 2048, topP = 0.9 } = options;
 
   try {
-    const response = await fetch(`${ZAI_BASE_URL}/chat/completions`, {
+    const response = await fetch(`${OLLAMA_BASE_URL}/chat/completions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${ZAI_API_KEY}`,
+        Authorization: `Bearer ${OLLAMA_API_KEY}`,
       },
       body: JSON.stringify({
-        model: ZAI_MODEL,
+        model: OLLAMA_MODEL,
         messages,
         temperature,
         max_tokens: maxTokens,
@@ -68,12 +68,12 @@ export async function* streamChat(
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(
-        `ZAI API error: ${response.status} ${response.statusText} - ${errorText}`
+        `Ollama Cloud API error: ${response.status} ${response.statusText} - ${errorText}`
       );
     }
 
     if (!response.body) {
-      throw new Error("No response body from ZAI API");
+      throw new Error("No response body from Ollama Cloud");
     }
 
     const reader = response.body.getReader();

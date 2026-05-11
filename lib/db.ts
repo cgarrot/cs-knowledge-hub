@@ -40,6 +40,20 @@ export function getDb(): Database.Database {
 
     CREATE INDEX IF NOT EXISTS idx_chunks_file_path ON chunks(file_path);
     CREATE INDEX IF NOT EXISTS idx_chunks_category ON chunks(category);
+
+    CREATE TABLE IF NOT EXISTS chat_history (
+      id TEXT PRIMARY KEY,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      question TEXT NOT NULL,
+      answer TEXT NOT NULL,
+      sources TEXT,
+      language TEXT DEFAULT 'en',
+      model TEXT,
+      feedback INTEGER DEFAULT NULL,
+      feedback_comment TEXT
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_chat_history_created ON chat_history(created_at DESC);
   `);
 
   return db;

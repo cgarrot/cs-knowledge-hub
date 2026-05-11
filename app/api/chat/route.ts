@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { buildRAGPrompt, streamChat, type ChatMessage } from "@/lib/llm";
+import { getDb } from "@/lib/db";
 import fs from "fs";
 import path from "path";
 
@@ -18,6 +19,7 @@ interface IndexEntry {
 
 const RAW_DIR = process.env.RAW_DIR || path.join(process.env.DATA_DIR || "/data", "sources");
 const INDEX_PATH = process.env.CATEGORY_INDEX_PATH || path.join(process.env.DATA_DIR || "/data", "full-index.json");
+const LLM_MODEL = process.env.LLM_MODEL || "deepseek-v4-flash";
 
 let fileIndexCache: { entries: IndexEntry[]; timestamp: number } | null = null;
 
@@ -39,11 +41,14 @@ function loadFileIndex(): IndexEntry[] {
   return fileIndexCache.entries;
 }
 
-function searchRelevantDocs(query: string, maxResults = 8): string {
+function detectLang(text: string): string {
+  return /[àâäéèêëïîôùûüÿçœæ]/i.test(text) ? "fr" : "en";
+}
+
+function searchRelevantDocs(query: string, maxResults = 8): { context: string; sources: string[] } {
   const q = query.toLowerCase();
   const entries = loadFileIndex();
 
-  // Score each entry by relevance
   const scored: Array<{ entry: IndexEntry; score: number }> = [];
   for (const entry of entries) {
     let score = 0;
@@ -52,7 +57,6 @@ function searchRelevantDocs(query: string, maxResults = 8): string {
     const lowerCategory = entry.category.toLowerCase();
     const lowerFile = entry.file.toLowerCase();
 
-    // Check summary match
     const summaryWords = q.split(/\s+/).filter(w => w.length > 2);
     for (const word of summaryWords) {
       if (lowerSummary.includes(word)) score += 3;
@@ -66,43 +70,35 @@ function searchRelevantDocs(query: string, maxResults = 8): string {
     }
   }
 
-  // Sort by score descending
   scored.sort((a, b) => b.score - a.score);
   const topResults = scored.slice(0, maxResults);
 
   if (topResults.length === 0) {
-    return "";
+    return { context: "", sources: [] };
   }
 
-  // Build context from top results, reading actual file content
+  const sources = topResults.map(r => r.entry.file);
   const contextParts: string[] = [];
-  for (const { entry, score } of topResults) {
+  for (const { entry } of topResults) {
     const fullPath = path.join(RAW_DIR, entry.file);
     let content = "";
     try {
       if (fs.existsSync(fullPath)) {
         content = fs.readFileSync(fullPath, "utf-8");
-        // Strip frontmatter
         if (content.startsWith("---")) {
           const endFm = content.indexOf("---", 3);
           if (endFm > 0) {
             content = content.slice(endFm + 3).trim();
           }
         }
-        // Remove timestamps like 00:25, 09:39
         content = content.replace(/\b\d{1,2}:\d{2}(?::\d{2})?(?:\.\d+)?\b/g, "");
-        // Remove [HH:MM:SS] markers
         content = content.replace(/\[\d{1,2}:\d{2}(?::\d{2})?\]/g, "");
-        // Clean up whitespace
         content = content.replace(/\n{3,}/g, "\n\n").trim();
-        // Truncate to first 2500 chars
         if (content.length > 2500) {
           content = content.slice(0, 2500) + "\n...[truncated]";
         }
       }
-    } catch {
-      // File not readable, use summary only
-    }
+    } catch {}
 
     const meta = [
       entry.category ? `Category: ${entry.category}` : "",
@@ -114,7 +110,37 @@ function searchRelevantDocs(query: string, maxResults = 8): string {
     );
   }
 
-  return contextParts.join("\n\n---\n\n");
+  return { context: contextParts.join("\n\n---\n\n"), sources };
+}
+
+// GET /api/chat — return chat history from DB
+export async function GET(request: NextRequest) {
+  try {
+    const db = getDb();
+    const url = new URL(request.url);
+    const limit = Math.min(parseInt(url.searchParams.get("limit") || "50"), 200);
+    const offset = parseInt(url.searchParams.get("offset") || "0");
+
+    const logs = db.prepare(
+      "SELECT * FROM chat_history ORDER BY created_at DESC LIMIT ? OFFSET ?"
+    ).all(limit, offset) as Array<{
+      id: string;
+      created_at: string;
+      question: string;
+      answer: string;
+      sources: string | null;
+      language: string;
+      model: string | null;
+      feedback: number | null;
+      feedback_comment: string | null;
+    }>;
+
+    const total = (db.prepare("SELECT COUNT(*) as c FROM chat_history").get() as { c: number }).c;
+
+    return NextResponse.json({ logs, total });
+  } catch {
+    return NextResponse.json({ logs: [], total: 0 });
+  }
 }
 
 interface ChatRequestBody {
@@ -135,10 +161,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Last message must be from user" }, { status: 400 });
     }
 
-    // Search relevant docs using raw file index (no DB needed)
-    const context = searchRelevantDocs(lastMessage.content, 8);
+    const question = lastMessage.content;
+    const { context, sources } = searchRelevantDocs(question, 8);
 
-    // Build messages for LLM
     const systemMessage: ChatMessage = {
       role: "system",
       content: buildRAGPrompt(context || "No specific documents found, answer from general CS2 knowledge."),
@@ -146,7 +171,9 @@ export async function POST(request: NextRequest) {
 
     const llmMessages: ChatMessage[] = [systemMessage, ...messages];
 
-    // Stream response
+    let fullResponse = "";
+    const chatId = `chat_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
     const encoder = new TextEncoder();
     let closed = false;
     const stream = new ReadableStream({
@@ -154,6 +181,7 @@ export async function POST(request: NextRequest) {
         try {
           for await (const chunk of streamChat(llmMessages)) {
             if (closed) return;
+            fullResponse += chunk;
             const data = JSON.stringify({ content: chunk });
             controller.enqueue(encoder.encode(`data: ${data}\n\n`));
           }
@@ -161,6 +189,9 @@ export async function POST(request: NextRequest) {
             controller.enqueue(encoder.encode("data: [DONE]\n\n"));
             controller.close();
             closed = true;
+
+            // Save to DB
+            saveChatHistory(chatId, question, fullResponse, sources);
           }
         } catch (error) {
           console.error("[chat] Stream error:", error);
@@ -174,11 +205,18 @@ export async function POST(request: NextRequest) {
             } catch {}
             controller.close();
             closed = true;
+
+            if (fullResponse) {
+              saveChatHistory(chatId, question, fullResponse + "\n\n⚠️ *Response was cut short due to an error.*", sources);
+            }
           }
         }
       },
       cancel() {
         closed = true;
+        if (fullResponse) {
+          saveChatHistory(chatId, question, fullResponse, sources);
+        }
       },
     });
 
@@ -192,5 +230,24 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("[chat] Error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+function saveChatHistory(id: string, question: string, answer: string, sources: string[]) {
+  try {
+    const db = getDb();
+    db.prepare(`
+      INSERT INTO chat_history (id, question, answer, sources, language, model)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(
+      id,
+      question,
+      answer,
+      JSON.stringify(sources),
+      detectLang(question),
+      LLM_MODEL
+    );
+  } catch (e) {
+    console.warn("[chat] Failed to save chat history:", e);
   }
 }

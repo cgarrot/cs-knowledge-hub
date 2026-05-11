@@ -85,7 +85,7 @@ export default async function CategoryPage({ params }: { params: Promise<{ categ
           {docs.map((doc) => (
             <Link
               key={doc.file_path}
-              href={`/docs/${categoryId}/${encodeURIComponent(doc.file_path)}`}
+              href={`/docs/${categoryId}/${doc.file_path.split('/').map(encodeURIComponent).join('/')}`}
               className="card-glow p-5 bg-surface-card border border-surface-border rounded-xl
                          hover:border-accent-purple/40 transition-all duration-300 group"
             >

@@ -1,14 +1,19 @@
 import { getCategory, loadCategoryIndex } from "@/lib/categories";
-import { getDb } from "@/lib/db";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import fs from "fs";
+import path from "path";
 
 export const dynamic = "force-dynamic";
 
-interface ChunkInfo {
-  file_path: string;
-  category: string | null;
-  summary: string | null;
+interface IndexEntry {
+  file: string;
+  category: string;
+  subcategory: string;
+  skill_level: string;
+  language: string;
+  topics: string[];
+  summary: string;
 }
 
 export default async function CategoryPage({ params }: { params: Promise<{ category: string }> }) {
@@ -16,26 +21,34 @@ export default async function CategoryPage({ params }: { params: Promise<{ categ
   const category = getCategory(categoryId);
   if (!category) notFound();
 
-  // Try to load docs from DB using chunks table
-  let docs: Array<{ file_path: string; title: string; category: string }> = [];
+  // Load documents from the full-index.json (not DB)
+  const docs: Array<{ file_path: string; title: string; category: string; summary: string; topics: string[] }> = [];
+  
   try {
-    const db = getDb();
-    const rows = db
-      .prepare(
-        `SELECT DISTINCT file_path, category FROM chunks WHERE category = ? ORDER BY file_path`
-      )
-      .all(categoryId) as Array<{ file_path: string; category: string | null }>;
-    docs = rows.map((r) => ({
-      file_path: r.file_path,
-      title: r.file_path
-        .replace(/\.md$/, "")
-        .split("/")
-        .pop()
-        ?.replace(/[-_]/g, " ") || r.file_path,
-      category: r.category || categoryId,
-    }));
-  } catch {
-    // DB not populated yet
+    const indexPath = process.env.CATEGORY_INDEX_PATH || "/app/data/full-index.json";
+    if (fs.existsSync(indexPath)) {
+      const raw = fs.readFileSync(indexPath, "utf-8");
+      const entries: IndexEntry[] = JSON.parse(raw);
+      
+      for (const entry of entries) {
+        if (entry.category === categoryId) {
+          const title = entry.file
+            .replace(/\.md$/, "")
+            .split("/")
+            .pop()
+            ?.replace(/[-_]/g, " ") || entry.file;
+          docs.push({
+            file_path: entry.file,
+            title,
+            category: entry.category,
+            summary: entry.summary || "",
+            topics: entry.topics || [],
+          });
+        }
+      }
+    }
+  } catch (e) {
+    console.warn("[docs] Failed to load index:", e);
   }
 
   return (
@@ -53,7 +66,7 @@ export default async function CategoryPage({ params }: { params: Promise<{ categ
         <h1 className="text-4xl font-bold gradient-text mb-3">{category.name}</h1>
         <p className="text-gray-400 text-lg max-w-2xl">{category.description}</p>
         <div className="mt-3 text-sm text-accent-purple/70">
-          {category.documentCount} document{category.documentCount !== 1 ? "s" : ""} available
+          {docs.length} document{docs.length !== 1 ? "s" : ""} available
         </div>
         {category.subcategories && category.subcategories.length > 0 && (
           <div className="mt-4 flex flex-wrap gap-2">
@@ -79,7 +92,18 @@ export default async function CategoryPage({ params }: { params: Promise<{ categ
               <h3 className="font-semibold text-gray-200 group-hover:text-accent-purple-light transition-colors">
                 {doc.title}
               </h3>
-              <p className="text-sm text-gray-500 mt-1">{doc.category}</p>
+              {doc.summary && (
+                <p className="text-sm text-gray-500 mt-1 line-clamp-2">{doc.summary}</p>
+              )}
+              {doc.topics.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {doc.topics.slice(0, 4).map((t) => (
+                    <span key={t} className="text-xs px-2 py-0.5 bg-accent-purple/10 text-accent-purple-light rounded">
+                      {t}
+                    </span>
+                  ))}
+                </div>
+              )}
             </Link>
           ))}
         </div>

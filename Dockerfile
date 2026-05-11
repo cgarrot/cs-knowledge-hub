@@ -7,11 +7,14 @@ WORKDIR /app
 
 # Copy package files first for caching
 COPY package*.json ./
-RUN npm ci --omit=dev
+RUN npm ci
 
 # Copy source and build
 COPY . .
 RUN npm run build
+
+# Prune devDependencies after build
+RUN npm prune --omit=dev
 
 # Data directory with categories and sources
 ENV CATEGORY_INDEX_PATH=/app/data/full-index.json

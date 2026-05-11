@@ -32,7 +32,8 @@ interface IndexEntry {
 }
 
 const INDEX_PATH =
-  process.env.CATEGORY_INDEX_PATH || "/home/ubuntu/cs-knowledge/categories/full-index.json";
+  process.env.CATEGORY_INDEX_PATH ||
+  path.join(process.env.DATA_DIR || "/data", "categories", "full-index.json");
 
 let cachedIndex: CategoryIndex | null = null;
 

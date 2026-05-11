@@ -82,9 +82,22 @@ function searchRelevantDocs(query: string, maxResults = 8): string {
     try {
       if (fs.existsSync(fullPath)) {
         content = fs.readFileSync(fullPath, "utf-8");
-        // Truncate to first 2000 chars to avoid overwhelming context
-        if (content.length > 2000) {
-          content = content.slice(0, 2000) + "\n...[truncated]";
+        // Strip frontmatter
+        if (content.startsWith("---")) {
+          const endFm = content.indexOf("---", 3);
+          if (endFm > 0) {
+            content = content.slice(endFm + 3).trim();
+          }
+        }
+        // Remove timestamps like 00:25, 09:39
+        content = content.replace(/\b\d{1,2}:\d{2}(?::\d{2})?(?:\.\d+)?\b/g, "");
+        // Remove [HH:MM:SS] markers
+        content = content.replace(/\[\d{1,2}:\d{2}(?::\d{2})?\]/g, "");
+        // Clean up whitespace
+        content = content.replace(/\n{3,}/g, "\n\n").trim();
+        // Truncate to first 2500 chars
+        if (content.length > 2500) {
+          content = content.slice(0, 2500) + "\n...[truncated]";
         }
       }
     } catch {
@@ -94,11 +107,10 @@ function searchRelevantDocs(query: string, maxResults = 8): string {
     const meta = [
       entry.category ? `Category: ${entry.category}` : "",
       entry.subcategory ? `Sub: ${entry.subcategory}` : "",
-      entry.skill_level ? `Level: ${entry.skill_level}` : "",
     ].filter(Boolean).join(" | ");
 
     contextParts.push(
-      `[Source: ${entry.file} (${meta}) - Relevance: ${score}]\n${content || entry.summary}`
+      `[${meta} | Source: ${entry.file.split("/").pop()}]\n${content || entry.summary}`
     );
   }
 

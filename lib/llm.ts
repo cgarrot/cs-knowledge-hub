@@ -1,12 +1,12 @@
 /**
- * Ollama Cloud LLM integration for chat responses.
+ * LLM integration for chat responses.
  * Supports streaming SSE responses using the OpenAI-compatible API format.
  */
 
-const OLLAMA_BASE_URL =
-  process.env.OLLAMA_BASE_URL || "https://ollama.com/v1";
-const OLLAMA_API_KEY = process.env.OLLAMA_API_KEY || "";
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "glm-5.1";
+const LLM_BASE_URL =
+  process.env.LLM_BASE_URL || "https://api.deepseek.com/v1";
+const LLM_API_KEY = process.env.LLM_API_KEY || process.env.OLLAMA_API_KEY || "";
+const LLM_MODEL = process.env.LLM_MODEL || "deepseek-chat";
 
 export interface ChatMessage {
   role: "system" | "user" | "assistant";
@@ -20,43 +20,69 @@ export interface LLMOptions {
 }
 
 /**
- * Build a RAG system prompt with context from retrieved documents.
+ * Clean raw transcript content: remove timestamps, video refs, keep substance.
  */
-export function buildRAGPrompt(context: string): string {
-  return `You are a helpful CS2 Knowledge Hub assistant specialized in Counter-Strike 2 gameplay, strategy, and professional play. You answer questions using the provided context from pro player guides, demo analyses, and training materials. If the context doesn't contain enough information, say so honestly. Always cite the source when possible.
-
-Context from knowledge base:
----
-${context}
----
-
-Instructions:
-- Answer the user's question using the context above
-- Be concise but thorough
-- Use specific examples from the sources when relevant
-- If you're unsure, say so rather than guessing
-- Reference specific pro players, maps, or strategies mentioned in the sources`;
+function cleanForContext(raw: string): string {
+  return raw
+    // Remove timestamp patterns like "00:25", "09:39", "12:34.5"
+    .replace(/\b\d{1,2}:\d{2}(?::\d{2})?(?:\.\d+)?\b/g, "")
+    // Remove "[HH:MM:SS]" bracketed timestamps
+    .replace(/\[\d{1,2}:\d{2}(?::\d{2})?\]/g, "")
+    // Remove lines that are just timestamps or chapter markers
+    .replace(/^[\s]*\d{1,2}:\d{2}[\s]*$/gm, "")
+    // Remove "at XX:XX" references
+    .replace(/\bat \d{1,2}:\d{2}\b/gi, "")
+    // Remove excessive whitespace
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }
 
 /**
- * Stream a chat completion from ZAI API (OpenAI-compatible SSE).
+ * Build a RAG system prompt with context from retrieved documents.
+ */
+export function buildRAGPrompt(context: string): string {
+  const cleanedContext = cleanForContext(context);
+
+  return `You are a CS2 coach and strategy advisor. Your job is to help players improve their Counter-Strike 2 gameplay with clear, actionable advice.
+
+RULES:
+- Answer in the SAME LANGUAGE as the user's question (French question = French answer, English = English)
+- Be direct and practical — give concrete tips, not vague descriptions
+- NEVER mention timestamps, video timecodes, or "at 03:25" references
+- NEVER quote the source material verbatim — synthesize and rephrase
+- NEVER say "according to the source" or "the analysis shows" — just give the advice
+- Structure your answer with clear sections using headers (##) and bullet points
+- Include specific callouts: nade lineups, angles to hold, crosshair placement tips, economy rules
+- If listing strategies, explain WHY they work, not just WHAT they are
+- If the context doesn't cover the topic well, supplement with your CS2 knowledge and say so briefly
+- Keep it focused — answer the question, don't dump everything you know
+- Use emojis sparingly for visual structure (🎯, 💡, ⚠️)
+
+KNOWLEDGE BASE CONTEXT (synthesized from pro player guides and demo analyses):
+---
+${cleanedContext}
+---`;
+}
+
+/**
+ * Stream a chat completion (OpenAI-compatible SSE).
  * Yields text chunks as they arrive.
  */
 export async function* streamChat(
   messages: ChatMessage[],
   options: LLMOptions = {}
 ): AsyncGenerator<string> {
-  const { temperature = 0.7, maxTokens = 4096, topP = 0.9 } = options;
+  const { temperature = 0.6, maxTokens = 4096, topP = 0.9 } = options;
 
   try {
-    const response = await fetch(`${OLLAMA_BASE_URL}/chat/completions`, {
+    const response = await fetch(`${LLM_BASE_URL}/chat/completions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${OLLAMA_API_KEY}`,
+        Authorization: `Bearer ${LLM_API_KEY}`,
       },
       body: JSON.stringify({
-        model: OLLAMA_MODEL,
+        model: LLM_MODEL,
         messages,
         temperature,
         max_tokens: maxTokens,
@@ -68,12 +94,12 @@ export async function* streamChat(
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(
-        `Ollama Cloud API error: ${response.status} ${response.statusText} - ${errorText}`
+        `LLM API error: ${response.status} ${response.statusText} - ${errorText}`
       );
     }
 
     if (!response.body) {
-      throw new Error("No response body from Ollama Cloud");
+      throw new Error("No response body from LLM API");
     }
 
     const reader = response.body.getReader();
@@ -107,7 +133,7 @@ export async function* streamChat(
     }
   } catch (error) {
     console.error("[llm] Error streaming chat:", error);
-    yield "I'm sorry, I encountered an error connecting to the AI service. Please try again later.";
+    yield "Sorry, I encountered an error connecting to the AI service. Please try again later.";
   }
 }
 

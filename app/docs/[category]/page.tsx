@@ -94,8 +94,3 @@ export default function CategoryPage({ params }: { params: { category: string } 
     </div>
   );
 }
-
-export function generateStaticParams() {
-  const index = loadCategoryIndex();
-  return index.categories.map((cat) => ({ category: cat.id }));
-}

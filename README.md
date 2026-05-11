@@ -1,36 +1,66 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CS Knowledge Hub
+
+A comprehensive computer science knowledge base with AI-powered chat, built with Next.js and RAG.
+
+## Features
+
+- **Category Browser** — Explore CS topics organized by category
+- **Semantic Search** — Find documents using vector similarity search
+- **AI Chat** — Ask questions with RAG-powered streaming responses
+- **Dark Theme** — Gaming-inspired UI with purple/orange accents
+
+## Tech Stack
+
+- Next.js 14+ (App Router)
+- TypeScript
+- TailwindCSS (dark theme)
+- SQLite + better-sqlite3
+- Ollama Cloud (LLM)
+- SSE Streaming
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
+# Install dependencies
+npm install
+
+# Copy environment config
+cp .env.example .env.local
+
+# Run development server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Project Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+app/
+├── page.tsx                    # Homepage with category grid & search
+├── chat/page.tsx               # ChatGPT-like interface
+├── docs/[category]/page.tsx    # Category page listing docs
+├── docs/[category]/[slug]/     # Individual doc page
+├── api/chat/route.ts           # RAG endpoint with streaming
+├── api/search/route.ts         # Search endpoint
+└── ...
+lib/
+├── db.ts                       # SQLite connection & vector search
+├── embeddings.ts               # Embedding generation
+├── llm.ts                      # Ollama Cloud integration
+└── categories.ts               # Category index loader
+```
 
-## Learn More
+## Deployment
 
-To learn more about Next.js, take a look at the following resources:
+Deployed via Dokploy on VPS with domain `cs-knowledge.zob.wtf`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- Build: nixpacks
+- Port: 3000
+- Volume: `/data` (SQLite persistence)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Data Pipeline
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Raw `.md` files in `/home/ubuntu/cs-knowledge/raw/sources/`
+2. Category index at `/home/ubuntu/cs-knowledge/categories/full-index.json`
+3. Embeddings & docs loaded into SQLite separately

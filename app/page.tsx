@@ -1,65 +1,97 @@
-import Image from "next/image";
+import { loadCategoryIndex } from "@/lib/categories";
 
-export default function Home() {
+export default function HomePage() {
+  const index = loadCategoryIndex();
+  const categories = index.categories;
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <div className="min-h-screen">
+      {/* Hero Section */}
+      <section className="relative py-20 px-4 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-accent-purple/5 to-transparent" />
+        <div className="max-w-7xl mx-auto relative">
+          <h1 className="text-5xl md:text-6xl font-bold text-center mb-6">
+            <span className="gradient-text">CS Knowledge Hub</span>
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p className="text-xl text-gray-400 text-center max-w-2xl mx-auto mb-10">
+            Explore computer science topics, search through curated knowledge, and chat with an AI assistant powered by your docs.
           </p>
+          <div className="flex items-center justify-center gap-4">
+            <a href="/chat" className="btn-primary text-lg">
+              💬 Ask the AI
+            </a>
+            <a href="#categories" className="btn-secondary text-lg">
+              📚 Browse Topics
+            </a>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+      </section>
+
+      {/* Search Bar */}
+      <section className="max-w-3xl mx-auto px-4 -mt-4 mb-12">
+        <form action="/api/search" method="get" className="relative">
+          <input
+            type="text"
+            name="q"
+            placeholder="Search documents, topics, concepts..."
+            className="w-full px-6 py-4 bg-surface-card border border-surface-border rounded-2xl 
+                       text-gray-100 placeholder-gray-500 text-lg
+                       focus:outline-none focus:border-accent-purple/50 focus:ring-2 focus:ring-accent-purple/20
+                       transition-all duration-200"
+          />
+          <button
+            type="submit"
+            className="absolute right-3 top-1/2 -translate-y-1/2 px-4 py-2 bg-accent-purple/20 rounded-xl 
+                       text-accent-purple-light hover:bg-accent-purple/30 transition-colors"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+            🔍
+          </button>
+        </form>
+      </section>
+
+      {/* Categories Grid */}
+      <section id="categories" className="max-w-7xl mx-auto px-4 pb-20">
+        <h2 className="text-3xl font-bold mb-8 gradient-text">Topics</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {categories.map((cat) => (
+            <a
+              key={cat.id}
+              href={`/docs/${cat.id}`}
+              className="card-glow group p-6 bg-surface-card border border-surface-border rounded-xl
+                         hover:border-accent-purple/40 transition-all duration-300"
+            >
+              <div className="text-4xl mb-3">{cat.icon}</div>
+              <h3 className="text-lg font-semibold text-gray-100 group-hover:text-accent-purple-light transition-colors">
+                {cat.name}
+              </h3>
+              <p className="text-sm text-gray-500 mt-2 line-clamp-2">
+                {cat.description}
+              </p>
+              <div className="mt-4 text-xs text-accent-purple/70">
+                {cat.documentCount} document{cat.documentCount !== 1 ? "s" : ""}
+              </div>
+            </a>
+          ))}
         </div>
-      </main>
+      </section>
+
+      {/* Stats Footer */}
+      <section className="border-t border-surface-border py-10 px-4">
+        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-center gap-8 text-gray-500">
+          <div className="text-center">
+            <div className="text-2xl font-bold gradient-text">{index.totalDocuments}</div>
+            <div className="text-sm">Documents</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold gradient-text">{categories.length}</div>
+            <div className="text-sm">Categories</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold gradient-text">AI</div>
+            <div className="text-sm">Powered Chat</div>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

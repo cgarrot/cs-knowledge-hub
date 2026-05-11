@@ -1,12 +1,105 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 interface Message {
   role: "user" | "assistant";
   content: string;
+}
+
+function MarkdownRenderer({ content }: { content: string }) {
+  return (
+    <div className="markdown-body text-sm leading-relaxed">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+          h1: ({ children }) => (
+            <h1 className="text-xl font-bold text-gray-100 mt-4 mb-2">{children}</h1>
+          ),
+          h2: ({ children }) => (
+            <h2 className="text-lg font-bold text-gray-100 mt-4 mb-2">{children}</h2>
+          ),
+          h3: ({ children }) => (
+            <h3 className="text-base font-bold text-gray-100 mt-3 mb-1">{children}</h3>
+          ),
+          p: ({ children }) => (
+            <p className="text-gray-200 mb-2 last:mb-0">{children}</p>
+          ),
+          ul: ({ children }) => (
+            <ul className="list-disc list-inside text-gray-200 mb-2 space-y-1">{children}</ul>
+          ),
+          ol: ({ children }) => (
+            <ol className="list-decimal list-inside text-gray-200 mb-2 space-y-1">{children}</ol>
+          ),
+          li: ({ children }) => (
+            <li className="text-gray-200">{children}</li>
+          ),
+          strong: ({ children }) => (
+            <strong className="font-semibold text-gray-100">{children}</strong>
+          ),
+          em: ({ children }) => (
+            <em className="text-accent-purple-light italic">{children}</em>
+          ),
+          blockquote: ({ children }) => (
+            <blockquote className="border-l-2 border-accent-purple/50 pl-3 my-2 text-gray-400 italic">
+              {children}
+            </blockquote>
+          ),
+          code: ({ className, children }) => {
+            const isInline = !className;
+            if (isInline) {
+              return (
+                <code className="bg-gray-800/50 px-1.5 py-0.5 rounded text-accent-purple-light text-xs">
+                  {children}
+                </code>
+              );
+            }
+            return (
+              <code className={`${className} block bg-gray-900 rounded-lg p-3 my-2 text-xs overflow-x-auto`}>
+                {children}
+              </code>
+            );
+          },
+          pre: ({ children }) => (
+            <pre className="bg-gray-900 rounded-lg p-3 my-2 overflow-x-auto text-xs">
+              {children}
+            </pre>
+          ),
+          hr: () => (
+            <hr className="border-surface-border my-3" />
+          ),
+          table: ({ children }) => (
+            <div className="overflow-x-auto my-2">
+              <table className="min-w-full text-sm border border-surface-border rounded-lg">
+                {children}
+              </table>
+            </div>
+          ),
+          thead: ({ children }) => (
+            <thead className="bg-gray-800/50">{children}</thead>
+          ),
+          tbody: ({ children }) => (
+            <tbody className="divide-y divide-surface-border">{children}</tbody>
+          ),
+          tr: ({ children }) => (
+            <tr className="border-b border-surface-border">{children}</tr>
+          ),
+          th: ({ children }) => (
+            <th className="px-3 py-2 text-left text-gray-300 font-semibold">{children}</th>
+          ),
+          td: ({ children }) => (
+            <td className="px-3 py-2 text-gray-300">{children}</td>
+          ),
+        }}
+      >
+        {content}
+      </ReactMarkdown>
+    </div>
+  );
 }
 
 function ChatContent() {
@@ -35,7 +128,6 @@ function ChatContent() {
     if (initialQuery && !initialQuerySent.current) {
       initialQuerySent.current = true;
       setInput(initialQuery);
-      // Small delay to let state settle
       setTimeout(() => {
         sendMessage(initialQuery);
       }, 100);
@@ -127,7 +219,7 @@ function ChatContent() {
         <span className="text-2xl">🤖</span>
         <div>
           <h1 className="font-semibold text-gray-100">CS Knowledge Assistant</h1>
-          <p className="text-xs text-gray-500">Powered by RAG + Ollama</p>
+          <p className="text-xs text-gray-500">Powered by RAG + DeepSeek</p>
         </div>
       </div>
 
@@ -145,11 +237,13 @@ function ChatContent() {
                   : "bg-surface-card border border-surface-border text-gray-200"
               }`}
             >
-              <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                {msg.content || (
-                  <span className="animate-pulse text-gray-500">Thinking...</span>
-                )}
-              </div>
+              {msg.role === "user" ? (
+                <div className="text-sm leading-relaxed">{msg.content}</div>
+              ) : msg.content ? (
+                <MarkdownRenderer content={msg.content} />
+              ) : (
+                <span className="animate-pulse text-gray-500">Thinking...</span>
+              )}
             </div>
           </div>
         ))}

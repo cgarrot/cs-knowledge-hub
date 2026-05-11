@@ -11,8 +11,9 @@ interface ChunkInfo {
   summary: string | null;
 }
 
-export default function CategoryPage({ params }: { params: { category: string } }) {
-  const category = getCategory(params.category);
+export default async function CategoryPage({ params }: { params: Promise<{ category: string }> }) {
+  const { category: categoryId } = await params;
+  const category = getCategory(categoryId);
   if (!category) notFound();
 
   // Try to load docs from DB using chunks table
@@ -23,7 +24,7 @@ export default function CategoryPage({ params }: { params: { category: string } 
       .prepare(
         `SELECT DISTINCT file_path, category FROM chunks WHERE category = ? ORDER BY file_path`
       )
-      .all(params.category) as Array<{ file_path: string; category: string | null }>;
+      .all(categoryId) as Array<{ file_path: string; category: string | null }>;
     docs = rows.map((r) => ({
       file_path: r.file_path,
       title: r.file_path
@@ -31,7 +32,7 @@ export default function CategoryPage({ params }: { params: { category: string } 
         .split("/")
         .pop()
         ?.replace(/[-_]/g, " ") || r.file_path,
-      category: r.category || params.category,
+      category: r.category || categoryId,
     }));
   } catch {
     // DB not populated yet
@@ -71,7 +72,7 @@ export default function CategoryPage({ params }: { params: { category: string } 
           {docs.map((doc) => (
             <Link
               key={doc.file_path}
-              href={`/docs/${params.category}/${encodeURIComponent(doc.file_path)}`}
+              href={`/docs/${categoryId}/${encodeURIComponent(doc.file_path)}`}
               className="card-glow p-5 bg-surface-card border border-surface-border rounded-xl
                          hover:border-accent-purple/40 transition-all duration-300 group"
             >

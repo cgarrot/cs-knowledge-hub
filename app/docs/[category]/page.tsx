@@ -3,6 +3,8 @@ import { getDb } from "@/lib/db";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+export const dynamic = "force-dynamic";
+
 interface ChunkInfo {
   file_path: string;
   category: string | null;

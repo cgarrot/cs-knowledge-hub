@@ -1,5 +1,7 @@
 import { loadCategoryIndex } from "@/lib/categories";
 
+export const dynamic = "force-dynamic";
+
 export default function HomePage() {
   const index = loadCategoryIndex();
   const categories = index.categories;

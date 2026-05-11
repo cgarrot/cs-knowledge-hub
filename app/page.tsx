@@ -31,11 +31,11 @@ export default function HomePage() {
 
       {/* Search Bar */}
       <section className="max-w-3xl mx-auto px-4 -mt-4 mb-12">
-        <form action="/api/search" method="get" className="relative">
+        <form action="/chat" method="get" className="relative">
           <input
             type="text"
             name="q"
-            placeholder="Search documents, topics, concepts..."
+            placeholder="Ask anything about CS2 strategy, aim, maps..."
             className="w-full px-6 py-4 bg-surface-card border border-surface-border rounded-2xl 
                        text-gray-100 placeholder-gray-500 text-lg
                        focus:outline-none focus:border-accent-purple/50 focus:ring-2 focus:ring-accent-purple/20
@@ -46,7 +46,7 @@ export default function HomePage() {
             className="absolute right-3 top-1/2 -translate-y-1/2 px-4 py-2 bg-accent-purple/20 rounded-xl 
                        text-accent-purple-light hover:bg-accent-purple/30 transition-colors"
           >
-            🔍
+            💬 Ask AI
           </button>
         </form>
       </section>

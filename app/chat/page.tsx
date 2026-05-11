@@ -1,13 +1,18 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 
 interface Message {
   role: "user" | "assistant";
   content: string;
 }
 
-export default function ChatPage() {
+function ChatContent() {
+  const searchParams = useSearchParams();
+  const initialQuery = searchParams.get("q") || "";
+
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
@@ -19,21 +24,31 @@ export default function ChatPage() {
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const initialQuerySent = useRef(false);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!input.trim() || isLoading) return;
+  // Auto-send initial query from ?q= param
+  useEffect(() => {
+    if (initialQuery && !initialQuerySent.current) {
+      initialQuerySent.current = true;
+      setInput(initialQuery);
+      // Small delay to let state settle
+      setTimeout(() => {
+        sendMessage(initialQuery);
+      }, 100);
+    }
+  }, [initialQuery]);
 
-    const userMessage = input.trim();
+  async function sendMessage(text: string) {
+    if (!text.trim() || isLoading) return;
+
+    const userMessage = text.trim();
     setInput("");
     setMessages((prev) => [...prev, { role: "user", content: userMessage }]);
     setIsLoading(true);
-
-    // Add empty assistant message for streaming
     setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
 
     try {
@@ -41,9 +56,7 @@ export default function ChatPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: [...messages, { role: "user", content: userMessage }]
-            .filter((m) => m.role === "user" || m.role === "assistant")
-            .map((m) => ({ role: m.role, content: m.content })),
+          messages: [{ role: "user", content: userMessage }],
         }),
       });
 
@@ -102,6 +115,11 @@ export default function ChatPage() {
     }
   }
 
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    sendMessage(input);
+  }
+
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)]">
       {/* Chat Header */}
@@ -151,7 +169,7 @@ export default function ChatPage() {
                 handleSubmit(e);
               }
             }}
-            placeholder="Ask about algorithms, data structures, networking..."
+            placeholder="Ask about CS2 strategy, aim, maps, economy..."
             rows={1}
             className="flex-1 px-4 py-3 bg-surface-card border border-surface-border rounded-xl
                        text-gray-100 placeholder-gray-500 resize-none
@@ -170,5 +188,13 @@ export default function ChatPage() {
         </form>
       </div>
     </div>
+  );
+}
+
+export default function ChatPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center h-screen text-gray-500">Loading...</div>}>
+      <ChatContent />
+    </Suspense>
   );
 }

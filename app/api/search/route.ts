@@ -18,19 +18,27 @@ export async function GET(request: NextRequest) {
     const similar = findSimilar(queryEmbedding, 10);
 
     if (similar.length > 0) {
-      const db = getDb();
       const results = similar.map((s) => {
-        const doc = db
-          .prepare("SELECT id, slug, title, category FROM documents WHERE id = ?")
-          .get(s.document_id) as { id: number; slug: string; title: string; category: string } | undefined;
+        let topics: string[] = [];
+        try {
+          topics = s.topics ? JSON.parse(s.topics) : [];
+        } catch { /* ignore */ }
 
         return {
-          documentId: s.document_id,
-          slug: doc?.slug || "",
-          title: doc?.title || "Unknown",
-          category: doc?.category || "unknown",
-          excerpt: s.chunk_text.slice(0, 200),
-          score: s.score,
+          id: s.id,
+          filePath: s.file_path,
+          title: s.file_path
+            .replace(/\.md$/, "")
+            .split("/")
+            .pop()
+            ?.replace(/[-_]/g, " ") || s.file_path,
+          category: s.category,
+          subcategory: s.subcategory,
+          skillLevel: s.skill_level,
+          topics,
+          summary: s.summary,
+          excerpt: s.chunk_text.slice(0, 300),
+          score: Math.round(s.score * 1000) / 1000,
         };
       });
 
@@ -42,32 +50,43 @@ export async function GET(request: NextRequest) {
 
   // Fallback: text search in SQLite
   try {
-    const db = getDb();
-    const results = db
+    const database = getDb();
+    const results = database
       .prepare(
-        `SELECT id, slug, title, category, substr(content, 1, 200) as excerpt 
-         FROM documents 
-         WHERE title LIKE ? OR content LIKE ?
-         ORDER BY title
+        `SELECT id, file_path, chunk_text, category, subcategory, skill_level, topics, summary
+         FROM chunks 
+         WHERE chunk_text LIKE ? OR category LIKE ?
+         ORDER BY id
          LIMIT 20`
       )
       .all(`%${query}%`, `%${query}%`) as Array<{
-        id: number;
-        slug: string;
-        title: string;
-        category: string;
-        excerpt: string;
-      }>;
+      id: number;
+      file_path: string;
+      chunk_text: string;
+      category: string | null;
+      subcategory: string | null;
+      skill_level: string | null;
+      topics: string | null;
+      summary: string | null;
+    }>;
 
     return NextResponse.json({
       query,
       results: results.map((r) => ({
-        documentId: r.id,
-        slug: r.slug,
-        title: r.title,
+        id: r.id,
+        filePath: r.file_path,
+        title: r.file_path
+          .replace(/\.md$/, "")
+          .split("/")
+          .pop()
+          ?.replace(/[-_]/g, " ") || r.file_path,
         category: r.category,
-        excerpt: r.excerpt,
-        score: 1,
+        subcategory: r.subcategory,
+        skillLevel: r.skill_level,
+        topics: r.topics ? JSON.parse(r.topics) : [],
+        summary: r.summary,
+        excerpt: r.chunk_text.slice(0, 300),
+        score: 0.5,
       })),
       mode: "text",
     });

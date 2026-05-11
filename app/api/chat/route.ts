@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generateEmbedding, chunkText } from "@/lib/embeddings";
-import { findSimilar, getDb } from "@/lib/db";
+import { generateEmbedding } from "@/lib/embeddings";
+import { findSimilar } from "@/lib/db";
 import { buildRAGPrompt, streamChat, type ChatMessage } from "@/lib/llm";
 
 export const runtime = "nodejs";
@@ -28,15 +28,21 @@ export async function POST(request: NextRequest) {
     let context = "";
     try {
       const queryEmbedding = await generateEmbedding(lastMessage.content);
-      const similar = findSimilar(queryEmbedding, 5);
+      const similar = findSimilar(queryEmbedding, 8);
 
       if (similar.length > 0) {
-        const db = getDb();
         const contextParts = similar.map((s) => {
-          const doc = db.prepare("SELECT title, category FROM documents WHERE id = ?").get(s.document_id) as
-            | { title: string; category: string }
-            | undefined;
-          return `[Source: ${doc?.title || "Unknown"} (${doc?.category || "unknown"}) - Score: ${s.score.toFixed(3)}]\n${s.chunk_text}`;
+          const source = s.file_path
+            .replace(/\.md$/, "")
+            .replace(/[-_]/g, " ");
+          const meta = [
+            s.category ? `Category: ${s.category}` : "",
+            s.subcategory ? `Sub: ${s.subcategory}` : "",
+            s.skill_level ? `Level: ${s.skill_level}` : "",
+          ]
+            .filter(Boolean)
+            .join(" | ");
+          return `[Source: ${source}${meta ? ` (${meta})` : ""} - Relevance: ${(s.score * 100).toFixed(0)}%]\n${s.chunk_text}`;
         });
         context = contextParts.join("\n\n---\n\n");
       }

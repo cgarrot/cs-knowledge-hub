@@ -1,11 +1,12 @@
 /**
- * Ollama Cloud LLM integration for chat responses.
- * Supports streaming SSE responses.
+ * ZAI API (Ollama Cloud) LLM integration for chat responses.
+ * Supports streaming SSE responses using the OpenAI-compatible API format.
  */
 
-const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || "https://api.ollama.cloud";
-const OLLAMA_API_KEY = process.env.OLLAMA_API_KEY || "";
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "llama3";
+const ZAI_BASE_URL =
+  process.env.ZAI_BASE_URL || "https://api.z.ai/api/paas/v4";
+const ZAI_API_KEY = process.env.ZAI_API_KEY || process.env.GLM_API_KEY || "";
+const ZAI_MODEL = process.env.ZAI_MODEL || "glm-5.1";
 
 export interface ChatMessage {
   role: "system" | "user" | "assistant";
@@ -22,7 +23,7 @@ export interface LLMOptions {
  * Build a RAG system prompt with context from retrieved documents.
  */
 export function buildRAGPrompt(context: string): string {
-  return `You are a helpful CS Knowledge Hub assistant. You answer questions about computer science topics using the provided context. If the context doesn't contain enough information, say so honestly. Always cite the source documents when possible.
+  return `You are a helpful CS2 Knowledge Hub assistant specialized in Counter-Strike 2 gameplay, strategy, and professional play. You answer questions using the provided context from pro player guides, demo analyses, and training materials. If the context doesn't contain enough information, say so honestly. Always cite the source when possible.
 
 Context from knowledge base:
 ---
@@ -32,44 +33,47 @@ ${context}
 Instructions:
 - Answer the user's question using the context above
 - Be concise but thorough
-- Use code examples when relevant
-- If you're unsure, say so rather than guessing`;
+- Use specific examples from the sources when relevant
+- If you're unsure, say so rather than guessing
+- Reference specific pro players, maps, or strategies mentioned in the sources`;
 }
 
 /**
- * Stream a chat completion from Ollama Cloud.
- * Yields SSE-formatted chunks.
+ * Stream a chat completion from ZAI API (OpenAI-compatible SSE).
+ * Yields text chunks as they arrive.
  */
 export async function* streamChat(
   messages: ChatMessage[],
   options: LLMOptions = {}
 ): AsyncGenerator<string> {
-  const { temperature = 0.7, maxTokens = 2048 } = options;
+  const { temperature = 0.7, maxTokens = 2048, topP = 0.9 } = options;
 
   try {
-    const response = await fetch(`${OLLAMA_BASE_URL}/api/chat`, {
+    const response = await fetch(`${ZAI_BASE_URL}/chat/completions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        ...(OLLAMA_API_KEY ? { Authorization: `Bearer ${OLLAMA_API_KEY}` } : {}),
+        Authorization: `Bearer ${ZAI_API_KEY}`,
       },
       body: JSON.stringify({
-        model: OLLAMA_MODEL,
+        model: ZAI_MODEL,
         messages,
-        options: {
-          temperature,
-          num_predict: maxTokens,
-        },
+        temperature,
+        max_tokens: maxTokens,
+        top_p: topP,
         stream: true,
       }),
     });
 
     if (!response.ok) {
-      throw new Error(`Ollama API error: ${response.status} ${response.statusText}`);
+      const errorText = await response.text();
+      throw new Error(
+        `ZAI API error: ${response.status} ${response.statusText} - ${errorText}`
+      );
     }
 
     if (!response.body) {
-      throw new Error("No response body from Ollama API");
+      throw new Error("No response body from ZAI API");
     }
 
     const reader = response.body.getReader();
@@ -85,19 +89,19 @@ export async function* streamChat(
       buffer = lines.pop() || "";
 
       for (const line of lines) {
-        if (line.startsWith("data: ")) {
-          const data = line.slice(6);
-          if (data === "[DONE]") return;
+        const trimmed = line.trim();
+        if (!trimmed || trimmed === "data: [DONE]") continue;
+        if (!trimmed.startsWith("data: ")) continue;
 
-          try {
-            const parsed = JSON.parse(data);
-            const content = parsed.message?.content;
-            if (content) {
-              yield content;
-            }
-          } catch {
-            // Skip malformed JSON
+        const data = trimmed.slice(6);
+        try {
+          const parsed = JSON.parse(data);
+          const content = parsed.choices?.[0]?.delta?.content;
+          if (content) {
+            yield content;
           }
+        } catch {
+          // Skip malformed JSON lines
         }
       }
     }

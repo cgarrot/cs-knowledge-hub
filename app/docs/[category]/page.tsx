@@ -3,23 +3,34 @@ import { getDb } from "@/lib/db";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-interface DocRow {
-  slug: string;
-  title: string;
-  category: string;
+interface ChunkInfo {
+  file_path: string;
+  category: string | null;
+  summary: string | null;
 }
 
 export default function CategoryPage({ params }: { params: { category: string } }) {
   const category = getCategory(params.category);
   if (!category) notFound();
 
-  // Try to load docs from DB
-  let docs: DocRow[] = [];
+  // Try to load docs from DB using chunks table
+  let docs: Array<{ file_path: string; title: string; category: string }> = [];
   try {
     const db = getDb();
-    docs = db
-      .prepare("SELECT slug, title, category FROM documents WHERE category = ? ORDER BY title")
-      .all(params.category) as DocRow[];
+    const rows = db
+      .prepare(
+        `SELECT DISTINCT file_path, category FROM chunks WHERE category = ? ORDER BY file_path`
+      )
+      .all(params.category) as Array<{ file_path: string; category: string | null }>;
+    docs = rows.map((r) => ({
+      file_path: r.file_path,
+      title: r.file_path
+        .replace(/\.md$/, "")
+        .split("/")
+        .pop()
+        ?.replace(/[-_]/g, " ") || r.file_path,
+      category: r.category || params.category,
+    }));
   } catch {
     // DB not populated yet
   }
@@ -41,6 +52,15 @@ export default function CategoryPage({ params }: { params: { category: string } 
         <div className="mt-3 text-sm text-accent-purple/70">
           {category.documentCount} document{category.documentCount !== 1 ? "s" : ""} available
         </div>
+        {category.subcategories && category.subcategories.length > 0 && (
+          <div className="mt-4 flex flex-wrap gap-2">
+            {category.subcategories.map((sub) => (
+              <span key={sub} className="px-3 py-1 text-xs bg-surface-card border border-surface-border rounded-full text-gray-400">
+                {sub}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Documents List */}
@@ -48,8 +68,8 @@ export default function CategoryPage({ params }: { params: { category: string } 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {docs.map((doc) => (
             <Link
-              key={doc.slug}
-              href={`/docs/${params.category}/${doc.slug}`}
+              key={doc.file_path}
+              href={`/docs/${params.category}/${encodeURIComponent(doc.file_path)}`}
               className="card-glow p-5 bg-surface-card border border-surface-border rounded-xl
                          hover:border-accent-purple/40 transition-all duration-300 group"
             >

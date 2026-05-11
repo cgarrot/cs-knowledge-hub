@@ -12,7 +12,7 @@ export default function ChatPage() {
     {
       role: "assistant",
       content:
-        "👋 Welcome to CS Knowledge Hub! I can answer questions about computer science topics using the knowledge base. What would you like to learn about?",
+        "👋 Welcome to CS2 Knowledge Hub! I can answer questions about Counter-Strike 2 strategy, maps, aim, and pro play using the knowledge base. What would you like to learn about?",
     },
   ]);
   const [input, setInput] = useState("");

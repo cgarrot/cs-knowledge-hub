@@ -187,6 +187,27 @@ export async function POST(request: NextRequest) {
 
     const encoder = new TextEncoder();
     let closed = false;
+
+    // Start map generation IN PARALLEL as soon as we know the map
+    // This avoids depending on the LLM stream completing successfully
+    let mapGenerationPromise: Promise<{ url: string; map: string } | null> | null = null;
+    if (detectedMap) {
+      console.log(`[chat] Map detected: ${detectedMap}, starting parallel map generation`);
+      mapGenerationPromise = generateTacticalMap(
+        getDefaultTactical(detectedMap, question) || {
+          map: detectedMap,
+          side: "T",
+          strategy: "Default positions",
+          players: [],
+          utility: [],
+          arrows: [],
+        }
+      ).catch((err) => {
+        console.warn("[chat] Parallel map generation failed:", err);
+        return null;
+      });
+    }
+
     const stream = new ReadableStream({
       async start(controller) {
         try {
@@ -225,7 +246,20 @@ export async function POST(request: NextRequest) {
                 }
               }
             } catch (mapError) {
-              console.warn("[chat] Failed to generate tactical map:", mapError);
+              console.warn("[chat] Failed to generate tactical map from stream response:", mapError);
+            }
+
+            // If stream-based generation failed, use the parallel pre-generated map
+            if (!mapImage && mapGenerationPromise) {
+              try {
+                const parallelResult = await mapGenerationPromise;
+                if (parallelResult) {
+                  console.log("[chat] Using parallel pre-generated map as fallback");
+                  mapImage = parallelResult;
+                }
+              } catch (e) {
+                console.warn("[chat] Parallel map fallback also failed:", e);
+              }
             }
 
             // Send map image info as a special SSE event if generated

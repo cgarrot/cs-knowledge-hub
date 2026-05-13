@@ -5,10 +5,17 @@ import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import TacticalMap from "@/components/TacticalMap";
+
+interface MapImageData {
+  url: string;
+  map: string;
+}
 
 interface Message {
   role: "user" | "assistant";
   content: string;
+  mapImage?: MapImageData | null;
 }
 
 function MarkdownRenderer({ content }: { content: string }) {
@@ -186,6 +193,19 @@ function ChatContent() {
                   return updated;
                 });
               }
+              // Detect tactical map image event
+              if (parsed.mapImage) {
+                const mapImg = parsed.mapImage as MapImageData;
+                setMessages((prev) => {
+                  const updated = [...prev];
+                  const last = updated[updated.length - 1];
+                  updated[updated.length - 1] = {
+                    ...last,
+                    mapImage: mapImg,
+                  };
+                  return updated;
+                });
+              }
             } catch {
               // Skip malformed chunks
             }
@@ -240,7 +260,15 @@ function ChatContent() {
               {msg.role === "user" ? (
                 <div className="text-sm leading-relaxed">{msg.content}</div>
               ) : msg.content ? (
-                <MarkdownRenderer content={msg.content} />
+                <>
+                  <MarkdownRenderer content={msg.content} />
+                  {msg.mapImage && (
+                    <TacticalMap
+                      svgUrl={msg.mapImage.url}
+                      mapName={msg.mapImage.map}
+                    />
+                  )}
+                </>
               ) : (
                 <span className="animate-pulse text-gray-500">Thinking...</span>
               )}

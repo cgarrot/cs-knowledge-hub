@@ -3,6 +3,12 @@
  * Supports streaming SSE responses using the OpenAI-compatible API format.
  */
 
+import {
+  detectMapMention,
+  getMapContext,
+  TACTICAL_PROMPT_INSTRUCTION,
+} from "./map-detection";
+
 const LLM_BASE_URL =
   process.env.LLM_BASE_URL || "https://api.deepseek.com/v1";
 const LLM_API_KEY = process.env.LLM_API_KEY || process.env.OLLAMA_API_KEY || "";
@@ -39,9 +45,25 @@ function cleanForContext(raw: string): string {
 
 /**
  * Build a RAG system prompt with context from retrieved documents.
+ * Optionally enriches the prompt with map-specific context if the user message
+ * mentions a CS2 map name.
  */
-export function buildRAGPrompt(context: string): string {
+export function buildRAGPrompt(context: string, userMessage?: string): string {
   const cleanedContext = cleanForContext(context);
+
+  // Detect map mention and append map context + tactical instructions
+  let mapSection = "";
+  if (userMessage) {
+    const mapName = detectMapMention(userMessage);
+    if (mapName) {
+      const mapCtx = getMapContext(mapName);
+      mapSection = `
+
+${mapCtx}
+
+${TACTICAL_PROMPT_INSTRUCTION}`;
+    }
+  }
 
   return `You are a CS2 coach and strategy advisor. Your job is to help players improve their Counter-Strike 2 gameplay with clear, actionable advice.
 
@@ -57,11 +79,11 @@ RULES:
 - If the context doesn't cover the topic well, supplement with your CS2 knowledge and say so briefly
 - Keep it focused — answer the question, don't dump everything you know
 - Use emojis sparingly for visual structure (🎯, 💡, ⚠️)
-
+${mapSection ? `\nMAP CONTEXT AND TACTICAL INSTRUCTIONS:\nWhen the user asks about a specific map, reference the map data provided below and ALWAYS include a tactical JSON block in your response.\n` : ""}
 KNOWLEDGE BASE CONTEXT (synthesized from pro player guides and demo analyses):
 ---
 ${cleanedContext}
----`;
+---${mapSection}`;
 }
 
 /**

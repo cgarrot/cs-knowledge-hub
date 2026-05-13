@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { buildRAGPrompt, streamChat, type ChatMessage } from "@/lib/llm";
 import { getDb } from "@/lib/db";
+import { parseTacticalJSON, toRendererOptions, type TacticalData } from "@/lib/map-detection";
 import fs from "fs";
 import path from "path";
 
@@ -166,7 +167,7 @@ export async function POST(request: NextRequest) {
 
     const systemMessage: ChatMessage = {
       role: "system",
-      content: buildRAGPrompt(context || "No specific documents found, answer from general CS2 knowledge."),
+      content: buildRAGPrompt(context || "No specific documents found, answer from general CS2 knowledge.", question),
     };
 
     const llmMessages: ChatMessage[] = [systemMessage, ...messages];
@@ -186,12 +187,32 @@ export async function POST(request: NextRequest) {
             controller.enqueue(encoder.encode(`data: ${data}\n\n`));
           }
           if (!closed) {
+            // After streaming completes, check for tactical JSON and generate map
+            let mapImage: { url: string; map: string } | undefined;
+            try {
+              const tactical = parseTacticalJSON(fullResponse);
+              if (tactical) {
+                const result = await generateTacticalMap(tactical);
+                if (result) {
+                  mapImage = result;
+                }
+              }
+            } catch (mapError) {
+              console.warn("[chat] Failed to generate tactical map:", mapError);
+            }
+
+            // Send map image info as a special SSE event if generated
+            if (mapImage) {
+              const mapData = JSON.stringify({ mapImage });
+              controller.enqueue(encoder.encode(`data: ${mapData}\n\n`));
+            }
+
             controller.enqueue(encoder.encode("data: [DONE]\n\n"));
             controller.close();
             closed = true;
 
             // Save to DB
-            saveChatHistory(chatId, question, fullResponse, sources);
+            saveChatHistory(chatId, question, fullResponse, sources, mapImage);
           }
         } catch (error) {
           console.error("[chat] Stream error:", error);
@@ -233,7 +254,13 @@ export async function POST(request: NextRequest) {
   }
 }
 
-function saveChatHistory(id: string, question: string, answer: string, sources: string[]) {
+function saveChatHistory(
+  id: string,
+  question: string,
+  answer: string,
+  sources: string[],
+  mapImage?: { url: string; map: string }
+) {
   try {
     const db = getDb();
     db.prepare(`
@@ -243,11 +270,69 @@ function saveChatHistory(id: string, question: string, answer: string, sources: 
       id,
       question,
       answer,
-      JSON.stringify(sources),
+      JSON.stringify({ sources, mapImage: mapImage || null }),
       detectLang(question),
       LLM_MODEL
     );
   } catch (e) {
     console.warn("[chat] Failed to save chat history:", e);
+  }
+}
+
+/**
+ * Generate a tactical map SVG from TacticalData.
+ * Calls the renderer directly (same logic as /api/map-tactics) to avoid
+ * an internal HTTP request during streaming.
+ */
+async function generateTacticalMap(
+  tactical: TacticalData
+): Promise<{ url: string; map: string } | null> {
+  try {
+    // HIGH-1 fix: Validate map name against allowlist
+    const { MAP_NAMES } = await import("@/lib/map-detection");
+    if (!MAP_NAMES.includes(tactical.map as any)) {
+      console.warn(`[chat] Invalid map name rejected: ${tactical.map}`);
+      return null;
+    }
+
+    // Limit array sizes to prevent DoS
+    if (tactical.players.length > 20 || tactical.utility.length > 30 || tactical.arrows.length > 50) {
+      console.warn(`[chat] Tactical data too large, truncating`);
+      tactical.players = tactical.players.slice(0, 20);
+      tactical.utility = tactical.utility.slice(0, 30);
+      tactical.arrows = tactical.arrows.slice(0, 50);
+    }
+
+    const outputDir = path.join(process.cwd(), "public", "generated-maps");
+    if (!fs.existsSync(outputDir)) {
+      fs.mkdirSync(outputDir, { recursive: true });
+    }
+
+    // Try the map renderer module directly (no HTTP self-fetch)
+    let svg: string;
+    try {
+      const renderer = await import("@/lib/map-renderer");
+      if (renderer.renderTacticalMap) {
+        const rendererOpts = toRendererOptions(tactical);
+        svg = renderer.renderTacticalMap(rendererOpts);
+      } else {
+        throw new Error("renderTacticalMap not exported");
+      }
+    } catch (rendererErr) {
+      console.warn("[chat] map-renderer unavailable, skipping SVG generation:", rendererErr);
+      return null;
+    }
+
+    // Save the SVG with sanitized filename
+    const timestamp = Date.now();
+    const safeMapName = tactical.map.replace(/[^a-z0-9]/g, "");
+    const filename = `${safeMapName}-${timestamp}.svg`;
+    const filePath = path.join(outputDir, filename);
+    fs.writeFileSync(filePath, svg, "utf-8");
+
+    return { url: `/generated-maps/${filename}`, map: tactical.map };
+  } catch (error) {
+    console.error("[chat] Error generating tactical map:", error);
+    return null;
   }
 }

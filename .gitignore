@@ -41,7 +41,9 @@ next-env.d.ts
 # data (but keep map data for tactical SVG generation)
 /data/
 !data/maps/
+!data/map-svgs/
 
 # Never commit data files (except maps)
 data/
 !data/maps/
+!data/map-svgs/

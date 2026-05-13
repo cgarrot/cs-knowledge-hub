@@ -20,6 +20,7 @@ RUN npm prune --omit=dev
 ENV CATEGORY_INDEX_PATH=/app/data/full-index.json
 ENV RAW_DIR=/app/data/sources
 ENV DATA_DIR=/app/data
+ENV CS_MAP_SVG_DIR=/app/data/map-svgs
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0

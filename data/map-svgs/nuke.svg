@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024" role="img">
+  <title>simplified counter-strike radar map</title>
+  <defs>
+    <style><![CDATA[
+      .map-base{fill:#35512b;stroke:#162513;stroke-width:4;stroke-linejoin:round;}
+      .map-structure{fill:#6f746b;stroke:none;opacity:.82;}
+      .site-orange{fill:#df790b;stroke:none;opacity:.95;}
+      .site-green{fill:#1bad3f;stroke:none;opacity:.95;}
+    ]]></style>
+  </defs>
+  <g id="base">
+    <path class="map-base" fill-rule="evenodd" d="M 998 477 L 994 468 L 993 450 L 695 450 L 693 453 L 668 454 L 668 391 L 633 390 L 631 309 L 607 311 L 607 280 L 561 280 L 561 311 L 535 309 L 535 389 L 510 390 L 504 396 L 504 449 L 433 451 L 432 479 L 369 542 L 362 542 L 361 536 L 299 536 L 298 565 L 254 565 L 253 534 L 134 534 L 133 496 L 63 492 L 63 595 L 165 595 L 166 577 L 223 577 L 224 610 L 248 610 L 249 600 L 326 600 L 327 596 L 382 596 L 383 605 L 390 606 L 470 725 L 609 770 L 720 767 L 722 750 L 794 750 L 796 746 L 795 723 L 793 726 L 780 725 L 778 720 L 782 707 L 796 708 L 795 686 L 778 685 L 782 669 L 795 671 L 796 683 L 793 654 L 796 645 L 784 645 L 780 642 L 780 578 L 750 576 L 750 541 L 772 541 L 773 537 L 769 533 L 774 532 L 784 511 L 804 493 L 820 489 L 841 489 L 857 493 L 879 513 L 939 513 L 940 563 L 994 563 L 994 486 L 998 484 Z M 748 732 L 762 734 L 761 749 L 746 748 Z M 564 724 L 602 724 L 603 739 L 565 739 Z M 711 643 L 723 646 L 720 658 L 708 655 Z M 529 612 L 537 612 L 537 626 L 564 626 L 569 623 L 570 631 L 530 632 Z M 327 580 L 341 579 L 342 593 L 328 594 Z M 532 575 L 538 576 L 537 587 L 530 586 Z M 417 569 L 420 570 L 419 577 L 416 576 Z M 638 564 L 639 631 L 599 632 L 599 623 L 603 626 L 632 625 L 632 565 Z M 350 537 L 360 536 L 361 546 L 351 547 Z M 524 533 L 527 534 L 526 542 L 523 541 Z M 671 529 L 680 527 L 682 531 L 672 533 Z M 751 519 L 762 521 L 760 532 L 749 530 Z M 890 453 L 906 451 L 907 464 L 891 465 Z M 720 452 L 725 451 L 726 455 L 722 457 Z M 699 452 L 708 451 L 710 455 L 701 457 Z M 695 451 L 699 452 L 698 457 L 693 455 Z M 562 417 L 606 416 L 607 427 L 566 425 L 563 428 Z M 531 415 L 536 415 L 536 448 L 632 448 L 632 445 L 636 444 L 637 450 L 641 453 L 533 453 Z M 551 370 L 561 369 L 562 380 L 552 381 Z M 563 326 L 567 327 L 566 347 L 563 346 Z M 569 292 L 580 293 L 579 307 L 568 306 Z"/>
+  </g>
+  <g id="structure" />
+  <g id="orange-overlays">
+    <path class="site-orange" fill-rule="evenodd" d="M 748 733 L 746 749 L 761 749 L 761 734 Z"/>
+    <path class="site-orange" fill-rule="evenodd" d="M 565 724 L 565 738 L 602 739 L 602 725 Z"/>
+    <path class="site-orange" fill-rule="evenodd" d="M 782 708 L 780 710 L 779 723 L 791 726 L 795 722 L 796 724 L 796 709 L 787 710 L 788 708 Z"/>
+    <path class="site-orange" fill-rule="evenodd" d="M 712 703 L 710 705 L 710 716 L 712 704 L 726 704 L 728 706 L 725 747 L 727 741 L 728 705 Z"/>
+    <path class="site-orange" fill-rule="evenodd" d="M 782 670 L 780 672 L 781 680 L 779 679 L 779 685 L 786 687 L 796 686 L 796 703 L 796 671 L 787 672 Z"/>
+    <path class="site-orange" fill-rule="evenodd" d="M 711 644 L 709 655 L 720 658 L 722 646 Z"/>
+    <path class="site-orange" fill-rule="evenodd" d="M 782 644 L 783 657 L 793 657 L 782 655 L 782 645 L 794 645 L 794 643 Z"/>
+    <path class="site-orange" fill-rule="evenodd" d="M 328 580 L 328 593 L 341 593 L 341 580 Z"/>
+    <path class="site-orange" fill-rule="evenodd" d="M 581 577 L 579 574 L 572 572 L 562 572 L 572 572 L 573 575 L 579 574 L 581 582 L 571 585 L 539 585 L 579 584 Z"/>
+    <path class="site-orange" fill-rule="evenodd" d="M 418 569 L 417 576 L 419 577 Z"/>
+    <path class="site-orange" fill-rule="evenodd" d="M 351 537 L 351 546 L 360 546 L 360 537 Z"/>
+    <path class="site-orange" fill-rule="evenodd" d="M 524 534 L 524 541 L 526 541 L 526 534 Z"/>
+    <path class="site-orange" fill-rule="evenodd" d="M 671 530 L 672 532 L 676 531 L 679 533 L 681 531 L 680 528 L 673 528 Z"/>
+    <path class="site-orange" fill-rule="evenodd" d="M 750 520 L 750 530 L 760 531 L 761 521 Z"/>
+    <path class="site-orange" fill-rule="evenodd" d="M 575 498 L 575 502 L 593 502 L 593 498 L 590 500 L 577 500 Z"/>
+    <path class="site-orange" fill-rule="evenodd" d="M 564 485 L 564 547 L 617 547 L 617 485 Z M 566 486 L 616 487 L 615 546 L 565 545 Z"/>
+    <path class="site-orange" fill-rule="evenodd" d="M 687 454 L 686 492 L 651 494 L 687 494 Z"/>
+    <path class="site-orange" fill-rule="evenodd" d="M 894 451 L 893 464 L 906 464 L 906 452 Z"/>
+    <path class="site-orange" fill-rule="evenodd" d="M 723 451 L 721 452 L 722 456 L 726 454 Z"/>
+    <path class="site-orange" fill-rule="evenodd" d="M 709 453 L 702 451 L 699 453 L 695 452 L 694 455 L 708 456 Z"/>
+    <path class="site-orange" fill-rule="evenodd" d="M 507 448 L 509 450 L 526 450 L 530 448 Z"/>
+    <path class="site-orange" fill-rule="evenodd" d="M 622 422 L 622 433 L 633 433 L 633 422 Z M 623 424 L 631 423 L 632 431 L 624 432 Z"/>
+    <path class="site-orange" fill-rule="evenodd" d="M 552 370 L 552 380 L 561 380 L 561 370 Z"/>
+    <path class="site-orange" fill-rule="evenodd" d="M 565 327 L 565 368 L 602 369 L 602 327 L 601 369 L 566 368 Z"/>
+    <path class="site-orange" fill-rule="evenodd" d="M 569 294 L 569 305 L 579 305 L 579 294 Z"/>
+  </g>
+  <g id="green-overlays">
+    <path class="site-green" fill-rule="evenodd" d="M 157 538 L 158 593 L 163 593 L 163 591 L 162 593 L 158 592 L 159 537 L 249 537 L 250 567 L 254 568 L 256 573 L 256 592 L 250 598 L 227 598 L 226 575 L 164 574 L 161 584 L 163 585 L 161 583 L 164 582 L 163 577 L 165 575 L 224 575 L 225 598 L 252 599 L 253 595 L 257 595 L 256 568 L 251 567 L 250 536 L 159 536 Z"/>
+    <path class="site-green" fill-rule="evenodd" d="M 807 490 L 819 486 L 835 485 L 858 491 L 837 485 L 824 485 Z"/>
+    <path class="site-green" fill-rule="evenodd" d="M 782 454 L 782 508 L 790 500 L 802 493 L 796 495 L 784 506 L 782 505 L 782 455 L 784 453 L 890 453 L 891 501 L 873 502 L 860 492 L 873 502 L 892 502 L 892 453 Z"/>
+    <path class="site-green" fill-rule="evenodd" d="M 563 417 L 563 427 L 566 424 L 602 424 L 603 427 L 606 427 L 606 417 L 602 419 L 566 419 L 566 417 Z"/>
+    <path class="site-green" fill-rule="evenodd" d="M 630 324 L 632 339 L 632 324 Z"/>
+    <path class="site-green" fill-rule="evenodd" d="M 611 310 L 629 312 L 629 310 Z"/>
+    <path class="site-green" fill-rule="evenodd" d="M 556 310 L 536 310 L 537 334 L 538 312 L 555 310 L 557 312 Z"/>
+    <path class="site-green" fill-rule="evenodd" d="M 561 307 L 563 283 L 604 283 L 561 282 Z"/>
+  </g>
+</svg>

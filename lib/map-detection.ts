@@ -927,35 +927,63 @@ function dedupArrows(
  * Tells the LLM how to format tactical output.
  */
 export const TACTICAL_PROMPT_INSTRUCTION = `
-TACTICAL MAP OUTPUT INSTRUCTIONS:
-When you discuss CS2 map strategies, positions, or tactics for a specific map, you MUST include a JSON code block with tactical data so a visual map diagram can be generated. Use this exact format:
+TACTICAL MAP OUTPUT INSTRUCTIONS (CRITICAL):
+When you discuss CS2 map strategies, positions, or tactics for a specific map, you MUST include a JSON code block with tactical data at the END of your response. This is NOT optional — the user expects a visual tactical map diagram to be generated from your response.
+
+Use this EXACT format — the code block MUST start with \`\`\`tactical and end with \`\`\`:
 
 \`\`\`tactical
 {
   "map": "<map_name>",
-  "side": "CT" or "T",
+  "side": "CT or T",
   "strategy": "<brief strategy name>",
   "players": [
-    {"position": "<callout_name>", "role": "<role_description>", "team": "CT" or "T"}
+    {"position": "<callout_name>", "role": "<role>", "team": "CT or T"}
   ],
   "utility": [
-    {"type": "smoke|flash|molotov|he", "from": "<callout_name>", "to": "<callout_name>", "description": "<what it does>"}
+    {"type": "smoke or flash or molotov or he", "from": "<callout>", "to": "<callout>", "description": "<what it does>"}
   ],
   "arrows": [
-    {"from": "<callout_name>", "to": "<callout_name>", "type": "movement|utility|rotation"}
+    {"from": "<callout>", "to": "<callout>", "type": "movement or utility or rotation"}
   ]
 }
 \`\`\`
 
-RULES for tactical JSON:
+EXAMPLE for a T-side Ancient execute:
+\`\`\`tactical
+{
+  "map": "ancient",
+  "side": "T",
+  "strategy": "A Site Execute via Mid Control",
+  "players": [
+    {"position": "A Main", "role": "Entry", "team": "T"},
+    {"position": "A Halls", "role": "Support", "team": "T"},
+    {"position": "Mid", "role": "IGL", "team": "T"},
+    {"position": "Donut", "role": "Lurker", "team": "T"},
+    {"position": "T Spawn", "role": "AWP", "team": "T"}
+  ],
+  "utility": [
+    {"type": "smoke", "from": "A Main", "to": "Heaven", "description": "Block Heaven vision"},
+    {"type": "smoke", "from": "A Main", "to": "CT Lane", "description": "Isolate A site"},
+    {"type": "flash", "from": "A Halls", "to": "A Site", "description": "Entry flash"},
+    {"type": "molotov", "from": "A Main", "to": "Triple Box", "description": "Clear corner"}
+  ],
+  "arrows": [
+    {"from": "A Main", "to": "A Site", "type": "movement"},
+    {"from": "A Halls", "to": "A Site", "type": "movement"},
+    {"from": "Mid", "to": "Donut", "type": "rotation"},
+    {"from": "Donut", "to": "B Site", "type": "rotation"}
+  ]
+}
+\`\`\`
+
+RULES:
 - Use ONLY callout names from the provided callout list for the map
-- "position" must be an exact callout name from the list
-- "from" and "to" must be exact callout names from the list
-- Include 5 players per team for a full execute/retake setup
+- Include 5 players (team T or CT depending on side)
+- Add utility for each grenade used in the strategy
 - Add arrows to show movement paths and rotations
-- Add utility entries for each grenade/smoke/flash used in the strategy
-- The "type" for utility must be one of: smoke, flash, molotov, he
-- The "type" for arrows must be one of: movement, utility, rotation
-- Always include this JSON block AFTER your textual explanation
-- Even for simple questions about positions or strategies, include a minimal tactical JSON
+- "type" for utility: smoke, flash, molotov, he
+- "type" for arrows: movement, utility, rotation
+- ALWAYS include this JSON block at the END of your message
+- This is MANDATORY — the user needs the visual map
 `.trim();

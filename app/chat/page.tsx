@@ -168,17 +168,21 @@ function ChatContent() {
 
       const decoder = new TextDecoder();
       let assistantContent = "";
+      let buffer = ""; // Buffer for incomplete SSE lines
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
 
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split("\n");
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        // Keep the last (potentially incomplete) line in the buffer
+        buffer = lines.pop() || "";
 
         for (const line of lines) {
-          if (line.startsWith("data: ")) {
-            const data = line.slice(6);
+          const trimmed = line.trim();
+          if (trimmed.startsWith("data: ")) {
+            const data = trimmed.slice(6);
             if (data === "[DONE]") continue;
             try {
               const parsed = JSON.parse(data);
@@ -195,6 +199,7 @@ function ChatContent() {
               }
               // Detect tactical map image event
               if (parsed.mapImage) {
+                console.log("[chat] Received mapImage event:", parsed.mapImage);
                 const mapImg = parsed.mapImage as MapImageData;
                 setMessages((prev) => {
                   const updated = [...prev];

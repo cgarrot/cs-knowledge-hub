@@ -211,28 +211,27 @@ export async function POST(request: NextRequest) {
 
     const stream = new ReadableStream({
       async start(controller) {
-        // Send map image early in a separate async loop
-        const mapSender = (async () => {
-          if (!mapGenerationPromise) return;
-          try {
-            const result = await mapGenerationPromise;
-            if (result && !closed && !mapSent) {
-              mapSent = true;
-              console.log("[chat] Sending parallel map image early");
-              const mapData = JSON.stringify({ mapImage: result });
-              controller.enqueue(encoder.encode(`data: ${mapData}\n\n`));
-            }
-          } catch (e) {
-            console.warn("[chat] Parallel map send failed:", e);
-          }
-        })();
-
         try {
           for await (const chunk of streamChat(llmMessages)) {
             if (closed) return;
             fullResponse += chunk;
             const data = JSON.stringify({ content: chunk });
             controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+
+            // Check if parallel map generation finished — send mapImage during stream
+            if (mapGenerationPromise && !mapSent) {
+              // Quick check without blocking (Promise.race with immediate resolve)
+              const quickResult = await Promise.race([
+                mapGenerationPromise.then(r => r),
+                Promise.resolve(null as { url: string; map: string } | null)
+              ]);
+              if (quickResult) {
+                mapSent = true;
+                console.log("[chat] Sending parallel map image mid-stream");
+                const mapData = JSON.stringify({ mapImage: quickResult });
+                controller.enqueue(encoder.encode(`data: ${mapData}\n\n`));
+              }
+            }
           }
           if (!closed) {
             // After streaming completes, try to get a BETTER map from the full response

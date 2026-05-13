@@ -1,0 +1,18 @@
+{
+  "name": "vertigo",
+  "displayName": "Vertigo",
+  "viewBox": [
+    0,
+    0,
+    1024,
+    1024
+  ],
+  "sites": {},
+  "spawns": {},
+  "callouts": [],
+  "zones": [],
+  "meta": {
+    "source": "https://community.skin.club/en/articles/vertigo-callouts-cs2",
+    "calloutCount": 0
+  }
+}

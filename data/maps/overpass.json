@@ -1,0 +1,1982 @@
+{
+  "name": "overpass",
+  "displayName": "Overpass",
+  "viewBox": [
+    0,
+    0,
+    1024,
+    1024
+  ],
+  "sites": {
+    "A": {
+      "x": 393,
+      "y": 171
+    },
+    "B": {
+      "x": 567,
+      "y": 257
+    }
+  },
+  "spawns": {
+    "CT": {
+      "x": 376,
+      "y": 147
+    },
+    "T": {
+      "x": 541,
+      "y": 725
+    }
+  },
+  "callouts": [
+    {
+      "name": "T Spawn",
+      "x": 525,
+      "y": 743,
+      "zone": "T Spawn",
+      "description": "The Terrorist starting area. Most T-side routes begin from here."
+    },
+    {
+      "name": "Playground",
+      "x": 330,
+      "y": 654,
+      "zone": "Playground",
+      "description": "The playground section near Fountain. It is an easy landmark and a common early-round staging area."
+    },
+    {
+      "name": "Fountain",
+      "x": 353,
+      "y": 580,
+      "zone": "Fountain",
+      "description": "The fountain area near Mid on the A side. Teams often start here before deciding how to take map control."
+    },
+    {
+      "name": "Party",
+      "x": 263,
+      "y": 480,
+      "zone": "Party",
+      "description": "The picnic area next to Mid marked by balloons. Also known as Balloons. Both names usually refer to the same section."
+    },
+    {
+      "name": "Upper Tunnels",
+      "x": 539,
+      "y": 598,
+      "zone": "Upper Tunnels",
+      "description": "The upper tunnel leading away from spawn. It connects into the lower tunnel system."
+    },
+    {
+      "name": "Ladder",
+      "x": 480,
+      "y": 573,
+      "zone": "Ladder",
+      "description": "The ladder between Upper and Lower Tunnels. It is a simple callout, but useful for tracking movement and timing."
+    },
+    {
+      "name": "Lower Tunnels",
+      "x": 447,
+      "y": 509,
+      "zone": "Lower Tunnels",
+      "description": "The lower tunnel area after the ladder. It leads toward Connector and the lower B-side routes."
+    },
+    {
+      "name": "Squeaky",
+      "x": 460,
+      "y": 403,
+      "zone": "Squeaky",
+      "description": "The door leading from Connector or Lower Tunnel into Water. It is a narrow choke point and often called during utility usage or quick pushes."
+    },
+    {
+      "name": "Water",
+      "x": 501,
+      "y": 372,
+      "zone": "Water",
+      "description": "The low area between Connector, Short Tunnel, and B Short. It is one of the most important lower-map callouts on Overpass."
+    },
+    {
+      "name": "A Long",
+      "x": 146,
+      "y": 424,
+      "zone": "A Long",
+      "description": "The wide outside approach into A from the park side. Teams often use it for slower control or split hits."
+    },
+    {
+      "name": "Hitmarker",
+      "x": 187,
+      "y": 611,
+      "zone": "Hitmarker",
+      "description": "Hitmarker refers to the spot right at the start of A Long, where Terrorists first show themselves. The callout comes from frequent AWP wallbangs that land through the wall and leave enemies badly hurt but alive."
+    },
+    {
+      "name": "Rock",
+      "x": 195,
+      "y": 541,
+      "zone": "Rock",
+      "description": "The rock on the T side of A Long. It is one of the first common cover spots when taking Long control."
+    },
+    {
+      "name": "Tree",
+      "x": 144,
+      "y": 475,
+      "zone": "Tree",
+      "description": "The tree on A Long. It is a simple landmark that players use constantly in Long fights."
+    },
+    {
+      "name": "Long Boost",
+      "x": 183,
+      "y": 335,
+      "zone": "Long Boost",
+      "description": "The raised spot near Long where players can boost or hold elevated angles. It is mainly used for surprise positioning."
+    },
+    {
+      "name": "Cafe",
+      "x": 222,
+      "y": 319,
+      "zone": "Cafe",
+      "description": "Located opposite the bench, this callout refers to the cafe sign on the other side of the Long Toilets wall."
+    },
+    {
+      "name": "Bench",
+      "x": 179,
+      "y": 293,
+      "zone": "Bench",
+      "description": "This bench is located directly opposite Cafe."
+    },
+    {
+      "name": "Long Toilets",
+      "x": 236,
+      "y": 386,
+      "zone": "Long Toilets",
+      "description": "The farther section of Toilets leading toward A Long. Fights here often decide who gains access to A."
+    },
+    {
+      "name": "Toilets",
+      "x": 333,
+      "y": 345,
+      "zone": "Toilets",
+      "description": "The indoor path from Mid toward A. It is one of the most important control areas on the map."
+    },
+    {
+      "name": "Mid",
+      "x": 334,
+      "y": 462,
+      "zone": "Mid",
+      "description": "The central area of the map between Fountain, Party, Toilets, and Connector. It is the main zone that links the upper and lower parts of Overpass."
+    },
+    {
+      "name": "Connector",
+      "x": 415,
+      "y": 464,
+      "zone": "Connector",
+      "description": "The stair and tunnel route linking Mid to the lower part of the map. It is very important for rotations and split pressure."
+    },
+    {
+      "name": "A Short",
+      "x": 339,
+      "y": 263,
+      "zone": "A Short",
+      "description": "The shorter route from Mid and Toilets into A. It is the quicker entry path compared to Long."
+    },
+    {
+      "name": "Flowers",
+      "x": 334,
+      "y": 222,
+      "zone": "Flowers",
+      "description": "The flowerbed near the A entrance. Players sometimes hide or crouch around it, so it can matter in close fights."
+    },
+    {
+      "name": "Alley",
+      "x": 606,
+      "y": 521,
+      "zone": "Alley",
+      "description": "Located in front of T Spawn, this is the first spot on the path furthest to the right."
+    },
+    {
+      "name": "Tracks",
+      "x": 672,
+      "y": 451,
+      "zone": "Tracks",
+      "description": "The area under the train tracks on the B side. It connects toward Monster and Short Tunnel."
+    },
+    {
+      "name": "Monster",
+      "x": 651,
+      "y": 346,
+      "zone": "Monster",
+      "description": "The large tunnel leading from T side into B. It is the main entrance for many B hits."
+    },
+    {
+      "name": "Sewers",
+      "x": 658,
+      "y": 257,
+      "zone": "Sewers",
+      "description": "The watery area just outside Monster before entering B. Teams often group there before pushing onto the site."
+    },
+    {
+      "name": "Barrels",
+      "x": 609,
+      "y": 209,
+      "zone": "Barrels",
+      "description": "The barrel stack on or near B Site. It gives cover and is often used by defenders holding the main entrance."
+    },
+    {
+      "name": "B Site",
+      "x": 555,
+      "y": 244,
+      "zone": "B Site",
+      "description": "The main bomb plant area on B. This callout usually means the wooden site platform and nearby fighting space."
+    },
+    {
+      "name": "Pillar",
+      "x": 585,
+      "y": 262,
+      "zone": "Pillar",
+      "description": "The large pillar in the middle of B Site. It is one of the key cover spots on the site and gets called constantly."
+    },
+    {
+      "name": "Pit",
+      "x": 495,
+      "y": 229,
+      "zone": "Pit",
+      "description": "The low water area behind B under Heaven. It is commonly used during retakes and for players dropping down from above."
+    },
+    {
+      "name": "Bridge",
+      "x": 548,
+      "y": 308,
+      "zone": "Bridge",
+      "description": "The path at the back of B connecting the site toward Graffiti and the CT side. It is usually called when someone is crossing that lane."
+    },
+    {
+      "name": "Heaven",
+      "x": 468,
+      "y": 191,
+      "zone": "Heaven",
+      "description": "The raised platform overlooking B from the CT side. It is one of the strongest defending and retake positions on the site."
+    },
+    {
+      "name": "B Short",
+      "x": 576,
+      "y": 366,
+      "zone": "B Short",
+      "description": "The route from Water into B Site. Some players also call it Construction, and it is one of the main split paths into the bombsite."
+    },
+    {
+      "name": "Sandbags",
+      "x": 574,
+      "y": 338,
+      "zone": "Sandbags",
+      "description": "The sandbags on B Short near the site entrance. It is one of the most common close positions on B."
+    },
+    {
+      "name": "Short Tunnel",
+      "x": 586,
+      "y": 409,
+      "zone": "Short Tunnel",
+      "description": "The tunnel leading from Tracks toward Water. It is part of the route used to pressure B Short."
+    },
+    {
+      "name": "Graffiti",
+      "x": 442,
+      "y": 345,
+      "zone": "Graffiti",
+      "description": "The back-site corner with graffiti on the wall. It is a classic B anchor spot and an important point of reference."
+    },
+    {
+      "name": "Storage",
+      "x": 349,
+      "y": 34,
+      "zone": "Storage",
+      "description": "The room between Bank and the nearby stairs on the A side. It is a more niche callout, but still useful for tracking rotations."
+    },
+    {
+      "name": "Bank",
+      "x": 345,
+      "y": 92,
+      "zone": "Bank",
+      "description": "The building behind A Site on the CT side. It overlooks the site and is a very common defensive position."
+    },
+    {
+      "name": "Signpost",
+      "x": 317,
+      "y": 190,
+      "zone": "Signpost",
+      "description": "The sign near the A entrances from Long and Short. It is a smaller detail callout, but useful for very specific positioning."
+    },
+    {
+      "name": "Van",
+      "x": 313,
+      "y": 118,
+      "zone": "Van",
+      "description": "The van next to Bank at the back of A. It is usually called when someone is hiding or fighting around that cover."
+    },
+    {
+      "name": "Dumpster",
+      "x": 412,
+      "y": 113,
+      "zone": "Dumpster",
+      "description": "The back-A area near the CT side behind the site. Different players may use slightly different names for this spot, but both usually refer to that same section."
+    },
+    {
+      "name": "CT",
+      "x": 450,
+      "y": 94,
+      "zone": "CT",
+      "description": "The Counter-Terrorist rotation route on the B side. Depending on context, it may mean the stairs or the general CT-side path. Also known as CT Stairs."
+    },
+    {
+      "name": "A Site",
+      "x": 357,
+      "y": 147,
+      "zone": "A Site",
+      "description": "The main bomb plant area on A. When players call “site,” they usually mean the open default fighting space itself."
+    },
+    {
+      "name": "Optimus",
+      "x": 413,
+      "y": 184,
+      "zone": "Optimus",
+      "description": "The large truck on A Site. It gives strong cover and is often used as a landmark during fights."
+    },
+    {
+      "name": "CT Spawn",
+      "x": 385,
+      "y": 125,
+      "zone": "CT Spawn",
+      "description": "The area where Counter-Terrorists spawn and rotate to A or B Sites."
+    },
+    {
+      "name": "Default",
+      "x": 202,
+      "y": 107,
+      "zone": "Default",
+      "description": "The most common plant spot on A, located near the green boxes. It is one of the standard references in post-plant and retake situations."
+    },
+    {
+      "name": "Close Left",
+      "x": 259,
+      "y": 155,
+      "zone": "Close Left",
+      "description": "The close corner on the left side when exiting Long onto A. It is a dangerous angle that attackers usually need to clear carefully."
+    },
+    {
+      "name": "Walkway",
+      "x": 457,
+      "y": 285,
+      "zone": "Walkway",
+      "description": "The path under Heaven on the CT side of B. It links the back-site area with the rotation route and is important in retakes."
+    }
+  ],
+  "zones": [
+    {
+      "name": "T Spawn",
+      "polygon": [
+        [
+          463,
+          754
+        ],
+        [
+          570,
+          647
+        ],
+        [
+          622,
+          693
+        ],
+        [
+          508,
+          803
+        ]
+      ],
+      "centroid": {
+        "x": 541,
+        "y": 725
+      },
+      "type": "spawn"
+    },
+    {
+      "name": "Playground",
+      "polygon": [
+        [
+          294,
+          726
+        ],
+        [
+          411,
+          661
+        ],
+        [
+          411,
+          638
+        ],
+        [
+          402,
+          620
+        ],
+        [
+          383,
+          610
+        ],
+        [
+          279,
+          608
+        ],
+        [
+          244,
+          629
+        ]
+      ],
+      "centroid": {
+        "x": 346,
+        "y": 642
+      },
+      "type": "area"
+    },
+    {
+      "name": "Fountain",
+      "polygon": [
+        [
+          372,
+          508
+        ],
+        [
+          450,
+          588
+        ],
+        [
+          414,
+          605
+        ],
+        [
+          280,
+          605
+        ],
+        [
+          255,
+          573
+        ]
+      ],
+      "centroid": {
+        "x": 354,
+        "y": 576
+      },
+      "type": "area"
+    },
+    {
+      "name": "Party",
+      "polygon": [
+        [
+          244,
+          421
+        ],
+        [
+          242,
+          538
+        ],
+        [
+          258,
+          567
+        ],
+        [
+          289,
+          553
+        ],
+        [
+          275,
+          526
+        ],
+        [
+          291,
+          518
+        ],
+        [
+          288,
+          421
+        ]
+      ],
+      "centroid": {
+        "x": 270,
+        "y": 507
+      },
+      "type": "area"
+    },
+    {
+      "name": "Upper Tunnels",
+      "polygon": [
+        [
+          620,
+          603
+        ],
+        [
+          620,
+          580
+        ],
+        [
+          466,
+          580
+        ],
+        [
+          467,
+          600
+        ]
+      ],
+      "centroid": {
+        "x": 543,
+        "y": 591
+      },
+      "type": "connector"
+    },
+    {
+      "name": "Ladder",
+      "polygon": [
+        [
+          466,
+          560
+        ],
+        [
+          488,
+          559
+        ],
+        [
+          487,
+          580
+        ],
+        [
+          466,
+          580
+        ]
+      ],
+      "centroid": {
+        "x": 477,
+        "y": 570
+      },
+      "type": "area"
+    },
+    {
+      "name": "Lower Tunnels",
+      "polygon": [
+        [
+          487,
+          528
+        ],
+        [
+          486,
+          558
+        ],
+        [
+          435,
+          560
+        ],
+        [
+          434,
+          548
+        ],
+        [
+          426,
+          547
+        ],
+        [
+          427,
+          495
+        ],
+        [
+          448,
+          495
+        ],
+        [
+          450,
+          444
+        ],
+        [
+          415,
+          443
+        ],
+        [
+          417,
+          404
+        ],
+        [
+          475,
+          404
+        ],
+        [
+          475,
+          449
+        ],
+        [
+          469,
+          450
+        ],
+        [
+          469,
+          528
+        ]
+      ],
+      "centroid": {
+        "x": 451,
+        "y": 490
+      },
+      "type": "connector"
+    },
+    {
+      "name": "Squeaky",
+      "polygon": [
+        [
+          460,
+          391
+        ],
+        [
+          474,
+          391
+        ],
+        [
+          473,
+          410
+        ],
+        [
+          457,
+          410
+        ]
+      ],
+      "centroid": {
+        "x": 466,
+        "y": 401
+      },
+      "type": "area"
+    },
+    {
+      "name": "Water",
+      "polygon": [
+        [
+          460,
+          333
+        ],
+        [
+          543,
+          342
+        ],
+        [
+          543,
+          433
+        ],
+        [
+          475,
+          433
+        ],
+        [
+          476,
+          388
+        ],
+        [
+          461,
+          389
+        ]
+      ],
+      "centroid": {
+        "x": 493,
+        "y": 387
+      },
+      "type": "area"
+    },
+    {
+      "name": "A Long",
+      "polygon": [
+        [
+          239,
+          627
+        ],
+        [
+          214,
+          576
+        ],
+        [
+          215,
+          420
+        ],
+        [
+          194,
+          420
+        ],
+        [
+          196,
+          324
+        ],
+        [
+          239,
+          325
+        ],
+        [
+          242,
+          278
+        ],
+        [
+          288,
+          179
+        ],
+        [
+          257,
+          167
+        ],
+        [
+          209,
+          260
+        ],
+        [
+          124,
+          306
+        ],
+        [
+          125,
+          524
+        ],
+        [
+          187,
+          654
+        ]
+      ],
+      "centroid": {
+        "x": 210,
+        "y": 390
+      },
+      "type": "connector"
+    },
+    {
+      "name": "Hitmarker",
+      "polygon": [
+        [
+          149,
+          578
+        ],
+        [
+          215,
+          552
+        ],
+        [
+          214,
+          576
+        ],
+        [
+          224,
+          593
+        ],
+        [
+          248,
+          583
+        ],
+        [
+          245,
+          625
+        ],
+        [
+          186,
+          655
+        ]
+      ],
+      "centroid": {
+        "x": 212,
+        "y": 595
+      },
+      "type": "area"
+    },
+    {
+      "name": "Rock",
+      "polygon": [
+        [
+          198,
+          513
+        ],
+        [
+          178,
+          533
+        ],
+        [
+          200,
+          558
+        ],
+        [
+          212,
+          531
+        ]
+      ],
+      "centroid": {
+        "x": 197,
+        "y": 534
+      },
+      "type": "area"
+    },
+    {
+      "name": "Tree",
+      "polygon": [
+        [
+          123,
+          453
+        ],
+        [
+          164,
+          452
+        ],
+        [
+          158,
+          483
+        ],
+        [
+          129,
+          484
+        ]
+      ],
+      "centroid": {
+        "x": 144,
+        "y": 468
+      },
+      "type": "area"
+    },
+    {
+      "name": "Long Boost",
+      "polygon": [
+        [
+          170,
+          322
+        ],
+        [
+          196,
+          322
+        ],
+        [
+          195,
+          343
+        ],
+        [
+          170,
+          343
+        ]
+      ],
+      "centroid": {
+        "x": 183,
+        "y": 333
+      },
+      "type": "connector"
+    },
+    {
+      "name": "Cafe",
+      "polygon": [
+        [
+          198,
+          307
+        ],
+        [
+          201,
+          324
+        ],
+        [
+          239,
+          324
+        ],
+        [
+          241,
+          306
+        ]
+      ],
+      "centroid": {
+        "x": 220,
+        "y": 316
+      },
+      "type": "area"
+    },
+    {
+      "name": "Bench",
+      "polygon": [
+        [
+          126,
+          305
+        ],
+        [
+          151,
+          314
+        ],
+        [
+          215,
+          281
+        ],
+        [
+          209,
+          260
+        ]
+      ],
+      "centroid": {
+        "x": 175,
+        "y": 290
+      },
+      "type": "area"
+    },
+    {
+      "name": "Long Toilets",
+      "polygon": [
+        [
+          303,
+          418
+        ],
+        [
+          303,
+          396
+        ],
+        [
+          258,
+          397
+        ],
+        [
+          243,
+          383
+        ],
+        [
+          243,
+          360
+        ],
+        [
+          195,
+          361
+        ],
+        [
+          196,
+          401
+        ],
+        [
+          215,
+          418
+        ]
+      ],
+      "centroid": {
+        "x": 245,
+        "y": 392
+      },
+      "type": "connector"
+    },
+    {
+      "name": "Toilets",
+      "polygon": [
+        [
+          314,
+          396
+        ],
+        [
+          312,
+          421
+        ],
+        [
+          345,
+          420
+        ],
+        [
+          366,
+          400
+        ],
+        [
+          366,
+          302
+        ],
+        [
+          345,
+          281
+        ],
+        [
+          308,
+          281
+        ],
+        [
+          307,
+          303
+        ],
+        [
+          332,
+          304
+        ],
+        [
+          340,
+          311
+        ],
+        [
+          341,
+          334
+        ],
+        [
+          333,
+          334
+        ],
+        [
+          333,
+          365
+        ],
+        [
+          339,
+          366
+        ],
+        [
+          340,
+          388
+        ],
+        [
+          330,
+          394
+        ]
+      ],
+      "centroid": {
+        "x": 335,
+        "y": 350
+      },
+      "type": "area"
+    },
+    {
+      "name": "Mid",
+      "polygon": [
+        [
+          296,
+          514
+        ],
+        [
+          372,
+          477
+        ],
+        [
+          378,
+          457
+        ],
+        [
+          430,
+          413
+        ],
+        [
+          404,
+          360
+        ],
+        [
+          368,
+          360
+        ],
+        [
+          370,
+          401
+        ],
+        [
+          344,
+          422
+        ],
+        [
+          293,
+          424
+        ]
+      ],
+      "centroid": {
+        "x": 362,
+        "y": 426
+      },
+      "type": "connector"
+    },
+    {
+      "name": "Connector",
+      "polygon": [
+        [
+          428,
+          476
+        ],
+        [
+          427,
+          471
+        ],
+        [
+          386,
+          471
+        ],
+        [
+          392,
+          445
+        ],
+        [
+          446,
+          447
+        ],
+        [
+          446,
+          476
+        ]
+      ],
+      "centroid": {
+        "x": 421,
+        "y": 465
+      },
+      "type": "connector"
+    },
+    {
+      "name": "A Short",
+      "polygon": [
+        [
+          289,
+          276
+        ],
+        [
+          289,
+          245
+        ],
+        [
+          306,
+          212
+        ],
+        [
+          405,
+          260
+        ],
+        [
+          403,
+          360
+        ],
+        [
+          432,
+          411
+        ],
+        [
+          393,
+          442
+        ],
+        [
+          368,
+          398
+        ],
+        [
+          367,
+          301
+        ],
+        [
+          343,
+          279
+        ]
+      ],
+      "centroid": {
+        "x": 360,
+        "y": 319
+      },
+      "type": "connector"
+    },
+    {
+      "name": "Flowers",
+      "polygon": [
+        [
+          305,
+          210
+        ],
+        [
+          314,
+          197
+        ],
+        [
+          372,
+          226
+        ],
+        [
+          364,
+          240
+        ]
+      ],
+      "centroid": {
+        "x": 339,
+        "y": 219
+      },
+      "type": "area"
+    },
+    {
+      "name": "Alley",
+      "polygon": [
+        [
+          574,
+          475
+        ],
+        [
+          618,
+          455
+        ],
+        [
+          664,
+          547
+        ],
+        [
+          635,
+          576
+        ],
+        [
+          621,
+          577
+        ],
+        [
+          585,
+          525
+        ],
+        [
+          595,
+          524
+        ],
+        [
+          594,
+          496
+        ],
+        [
+          575,
+          497
+        ]
+      ],
+      "centroid": {
+        "x": 607,
+        "y": 519
+      },
+      "type": "connector"
+    },
+    {
+      "name": "Tracks",
+      "polygon": [
+        [
+          645,
+          506
+        ],
+        [
+          718,
+          506
+        ],
+        [
+          720,
+          430
+        ],
+        [
+          687,
+          368
+        ],
+        [
+          626,
+          368
+        ],
+        [
+          626,
+          460
+        ]
+      ],
+      "centroid": {
+        "x": 670,
+        "y": 440
+      },
+      "type": "area"
+    },
+    {
+      "name": "Monster",
+      "polygon": [
+        [
+          636,
+          366
+        ],
+        [
+          662,
+          365
+        ],
+        [
+          662,
+          320
+        ],
+        [
+          637,
+          320
+        ]
+      ],
+      "centroid": {
+        "x": 649,
+        "y": 343
+      },
+      "type": "area"
+    },
+    {
+      "name": "Sewers",
+      "polygon": [
+        [
+          636,
+          319
+        ],
+        [
+          673,
+          320
+        ],
+        [
+          720,
+          224
+        ],
+        [
+          656,
+          191
+        ],
+        [
+          641,
+          221
+        ],
+        [
+          613,
+          221
+        ],
+        [
+          615,
+          291
+        ],
+        [
+          636,
+          291
+        ]
+      ],
+      "centroid": {
+        "x": 649,
+        "y": 260
+      },
+      "type": "area"
+    },
+    {
+      "name": "Barrels",
+      "polygon": [
+        [
+          593,
+          190
+        ],
+        [
+          593,
+          223
+        ],
+        [
+          612,
+          224
+        ],
+        [
+          611,
+          189
+        ]
+      ],
+      "centroid": {
+        "x": 602,
+        "y": 207
+      },
+      "type": "area"
+    },
+    {
+      "name": "B Site",
+      "polygon": [
+        [
+          533,
+          230
+        ],
+        [
+          583,
+          230
+        ],
+        [
+          582,
+          246
+        ],
+        [
+          572,
+          257
+        ],
+        [
+          581,
+          272
+        ],
+        [
+          580,
+          281
+        ],
+        [
+          534,
+          281
+        ]
+      ],
+      "centroid": {
+        "x": 567,
+        "y": 257
+      },
+      "type": "site"
+    },
+    {
+      "name": "Pillar",
+      "polygon": [
+        [
+          574,
+          257
+        ],
+        [
+          584,
+          244
+        ],
+        [
+          598,
+          249
+        ],
+        [
+          599,
+          267
+        ],
+        [
+          582,
+          270
+        ]
+      ],
+      "centroid": {
+        "x": 588,
+        "y": 258
+      },
+      "type": "area"
+    },
+    {
+      "name": "Pit",
+      "polygon": [
+        [
+          507,
+          290
+        ],
+        [
+          528,
+          291
+        ],
+        [
+          529,
+          226
+        ],
+        [
+          568,
+          225
+        ],
+        [
+          565,
+          190
+        ],
+        [
+          530,
+          190
+        ],
+        [
+          489,
+          170
+        ],
+        [
+          459,
+          229
+        ],
+        [
+          459,
+          261
+        ],
+        [
+          506,
+          265
+        ]
+      ],
+      "centroid": {
+        "x": 514,
+        "y": 234
+      },
+      "type": "area"
+    },
+    {
+      "name": "Bridge",
+      "polygon": [
+        [
+          597,
+          292
+        ],
+        [
+          462,
+          288
+        ],
+        [
+          459,
+          321
+        ],
+        [
+          503,
+          310
+        ],
+        [
+          598,
+          321
+        ]
+      ],
+      "centroid": {
+        "x": 524,
+        "y": 307
+      },
+      "type": "area"
+    },
+    {
+      "name": "Heaven",
+      "polygon": [
+        [
+          438,
+          208
+        ],
+        [
+          466,
+          156
+        ],
+        [
+          487,
+          169
+        ],
+        [
+          460,
+          222
+        ]
+      ],
+      "centroid": {
+        "x": 463,
+        "y": 189
+      },
+      "type": "area"
+    },
+    {
+      "name": "B Short",
+      "polygon": [
+        [
+          550,
+          342
+        ],
+        [
+          549,
+          366
+        ],
+        [
+          600,
+          366
+        ],
+        [
+          599,
+          325
+        ],
+        [
+          568,
+          322
+        ],
+        [
+          568,
+          343
+        ]
+      ],
+      "centroid": {
+        "x": 572,
+        "y": 344
+      },
+      "type": "connector"
+    },
+    {
+      "name": "Sandbags",
+      "polygon": [
+        [
+          570,
+          326
+        ],
+        [
+          599,
+          329
+        ],
+        [
+          596,
+          346
+        ],
+        [
+          566,
+          343
+        ]
+      ],
+      "centroid": {
+        "x": 583,
+        "y": 336
+      },
+      "type": "area"
+    },
+    {
+      "name": "Short Tunnel",
+      "polygon": [
+        [
+          547,
+          400
+        ],
+        [
+          623,
+          400
+        ],
+        [
+          624,
+          422
+        ],
+        [
+          548,
+          422
+        ]
+      ],
+      "centroid": {
+        "x": 586,
+        "y": 411
+      },
+      "type": "connector"
+    },
+    {
+      "name": "Graffiti",
+      "polygon": [
+        [
+          415,
+          303
+        ],
+        [
+          456,
+          304
+        ],
+        [
+          456,
+          380
+        ],
+        [
+          435,
+          381
+        ],
+        [
+          413,
+          329
+        ],
+        [
+          425,
+          331
+        ],
+        [
+          426,
+          311
+        ],
+        [
+          415,
+          312
+        ]
+      ],
+      "centroid": {
+        "x": 430,
+        "y": 332
+      },
+      "type": "area"
+    },
+    {
+      "name": "Storage",
+      "polygon": [
+        [
+          316,
+          12
+        ],
+        [
+          383,
+          11
+        ],
+        [
+          384,
+          48
+        ],
+        [
+          315,
+          48
+        ]
+      ],
+      "centroid": {
+        "x": 350,
+        "y": 30
+      },
+      "type": "area"
+    },
+    {
+      "name": "Bank",
+      "polygon": [
+        [
+          350,
+          59
+        ],
+        [
+          379,
+          76
+        ],
+        [
+          356,
+          114
+        ],
+        [
+          328,
+          100
+        ]
+      ],
+      "centroid": {
+        "x": 353,
+        "y": 88
+      },
+      "type": "area"
+    },
+    {
+      "name": "Signpost",
+      "polygon": [
+        [
+          296,
+          165
+        ],
+        [
+          288,
+          182
+        ],
+        [
+          314,
+          194
+        ],
+        [
+          325,
+          179
+        ]
+      ],
+      "centroid": {
+        "x": 306,
+        "y": 180
+      },
+      "type": "area"
+    },
+    {
+      "name": "Van",
+      "polygon": [
+        [
+          314,
+          100
+        ],
+        [
+          294,
+          118
+        ],
+        [
+          337,
+          123
+        ],
+        [
+          339,
+          109
+        ]
+      ],
+      "centroid": {
+        "x": 321,
+        "y": 113
+      },
+      "type": "area"
+    },
+    {
+      "name": "Dumpster",
+      "polygon": [
+        [
+          393,
+          88
+        ],
+        [
+          434,
+          108
+        ],
+        [
+          420,
+          127
+        ],
+        [
+          382,
+          110
+        ]
+      ],
+      "centroid": {
+        "x": 407,
+        "y": 109
+      },
+      "type": "area"
+    },
+    {
+      "name": "CT",
+      "polygon": [
+        [
+          435,
+          65
+        ],
+        [
+          466,
+          65
+        ],
+        [
+          465,
+          154
+        ],
+        [
+          435,
+          146
+        ]
+      ],
+      "centroid": {
+        "x": 450,
+        "y": 108
+      },
+      "type": "area"
+    },
+    {
+      "name": "A Site",
+      "polygon": [
+        [
+          359,
+          122
+        ],
+        [
+          452,
+          168
+        ],
+        [
+          428,
+          219
+        ],
+        [
+          333,
+          174
+        ]
+      ],
+      "centroid": {
+        "x": 393,
+        "y": 171
+      },
+      "type": "site"
+    },
+    {
+      "name": "Optimus",
+      "polygon": [
+        [
+          391,
+          169
+        ],
+        [
+          407,
+          159
+        ],
+        [
+          423,
+          186
+        ],
+        [
+          406,
+          196
+        ]
+      ],
+      "centroid": {
+        "x": 407,
+        "y": 178
+      },
+      "type": "area"
+    },
+    {
+      "name": "CT Spawn",
+      "polygon": [
+        [
+          373,
+          111
+        ],
+        [
+          342,
+          165
+        ],
+        [
+          382,
+          183
+        ],
+        [
+          407,
+          127
+        ]
+      ],
+      "centroid": {
+        "x": 376,
+        "y": 147
+      },
+      "type": "spawn"
+    },
+    {
+      "name": "Default",
+      "polygon": [
+        [
+          325,
+          155
+        ],
+        [
+          344,
+          151
+        ],
+        [
+          355,
+          169
+        ],
+        [
+          329,
+          171
+        ]
+      ],
+      "centroid": {
+        "x": 338,
+        "y": 162
+      },
+      "type": "area"
+    },
+    {
+      "name": "Close Left",
+      "polygon": [
+        [
+          254,
+          157
+        ],
+        [
+          267,
+          135
+        ],
+        [
+          284,
+          151
+        ],
+        [
+          274,
+          170
+        ]
+      ],
+      "centroid": {
+        "x": 270,
+        "y": 154
+      },
+      "type": "area"
+    },
+    {
+      "name": "Walkway",
+      "polygon": [
+        [
+          417,
+          272
+        ],
+        [
+          502,
+          268
+        ],
+        [
+          503,
+          288
+        ],
+        [
+          462,
+          287
+        ],
+        [
+          456,
+          302
+        ],
+        [
+          416,
+          300
+        ]
+      ],
+      "centroid": {
+        "x": 459,
+        "y": 286
+      },
+      "type": "area"
+    }
+  ],
+  "meta": {
+    "source": "https://community.skin.club/en/articles/overpass-callouts-cs2",
+    "calloutCount": 48
+  }
+}

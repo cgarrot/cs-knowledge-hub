@@ -1,0 +1,1913 @@
+{
+  "name": "inferno",
+  "displayName": "Inferno",
+  "viewBox": [
+    0,
+    0,
+    1024,
+    1024
+  ],
+  "sites": {
+    "A": {
+      "x": 645,
+      "y": 544
+    },
+    "B": {
+      "x": 403,
+      "y": 176
+    }
+  },
+  "spawns": {
+    "CT": {
+      "x": 718,
+      "y": 285
+    },
+    "T": {
+      "x": 130,
+      "y": 577
+    }
+  },
+  "callouts": [
+    {
+      "name": "T Spawn",
+      "x": 134,
+      "y": 589,
+      "zone": "T Spawn",
+      "description": "The Terrorist starting position."
+    },
+    {
+      "name": "Living Room",
+      "x": 288,
+      "y": 568,
+      "zone": "Living Room",
+      "description": "The upstairs apartment area close to T Spawn / T Apps."
+    },
+    {
+      "name": "Second Mid",
+      "x": 386,
+      "y": 638,
+      "zone": "Second Mid",
+      "description": "The parallel route to Mid, giving attackers an alternative way to approach A Site. Also known as Alt Mid."
+    },
+    {
+      "name": "Bridge",
+      "x": 271,
+      "y": 641,
+      "zone": "Bridge",
+      "description": "The upstairs apartment area close to T Spawn / T Apps."
+    },
+    {
+      "name": "T Balcony",
+      "x": 323,
+      "y": 606,
+      "zone": "T Balcony",
+      "description": "The connector balcony between Living Room and T Apps, watching Second Mid / Apartments."
+    },
+    {
+      "name": "T Apps",
+      "x": 298,
+      "y": 694,
+      "zone": "T Apps",
+      "description": "The apartment building which runs along the bottom side of Second Mid."
+    },
+    {
+      "name": "T Ramp",
+      "x": 314,
+      "y": 490,
+      "zone": "T Ramp",
+      "description": "The starting point for Ts, leading toward Mid or Banana."
+    },
+    {
+      "name": "Ledge",
+      "x": 235,
+      "y": 460,
+      "zone": "Ledge",
+      "description": "The raised spot just behind T Ramp, offering a different peek toward Top Mid."
+    },
+    {
+      "name": "Mid",
+      "x": 438,
+      "y": 533,
+      "zone": "Mid",
+      "description": "The central area of the map crucial for CT control."
+    },
+    {
+      "name": "Underpass",
+      "x": 381,
+      "y": 543,
+      "zone": "Underpass",
+      "description": "The small tunnel that connects Second Mid to Mid. Great for sneaky plays."
+    },
+    {
+      "name": "Bottom Mid",
+      "x": 325,
+      "y": 517,
+      "zone": "Bottom Mid",
+      "description": "The side of the middle which is closer to T Spawn."
+    },
+    {
+      "name": "Top Mid",
+      "x": 561,
+      "y": 534,
+      "zone": "Top Mid",
+      "description": "The position behind the A Site through which you can go either Short or Long."
+    },
+    {
+      "name": "Boiler",
+      "x": 533,
+      "y": 580,
+      "zone": "Boiler",
+      "description": "The room connecting Apartments to Mid. A great position for picks."
+    },
+    {
+      "name": "Stairs",
+      "x": 479,
+      "y": 596,
+      "zone": "Stairs",
+      "description": "The stairs in CT Apartments leading up to CT Apps from Second Mid, where close-range duels happen fast."
+    },
+    {
+      "name": "Window",
+      "x": 484,
+      "y": 639,
+      "zone": "Window",
+      "description": "The CT Apartments front window facing Second Mid, though it leaves you exposed."
+    },
+    {
+      "name": "Back Alley",
+      "x": 414,
+      "y": 735,
+      "zone": "Back Alley",
+      "description": "The T Apartments exit linking to the outside of CT Apartments Stairs."
+    },
+    {
+      "name": "Apartments",
+      "x": 573,
+      "y": 674,
+      "zone": "Apartments",
+      "description": "The series of small rooms leading to Balcony, the key entry point for attacking A Site. Also known as Apps."
+    },
+    {
+      "name": "Pit",
+      "x": 713,
+      "y": 681,
+      "zone": "Pit",
+      "description": "This is a prime spot for defending A Site. Players can crouch behind cover, peek at enemies pushing from Short or Balcony, and delay bomb plants."
+    },
+    {
+      "name": "Balcony",
+      "x": 672,
+      "y": 655,
+      "zone": "Balcony",
+      "description": "Overlooks Pit and A Site. The common entry point for T-side players coming from Apartments."
+    },
+    {
+      "name": "Short",
+      "x": 606,
+      "y": 613,
+      "zone": "Short",
+      "description": "The tight passage connecting Mid to A Site. A must-know callout for fast executes."
+    },
+    {
+      "name": "Long",
+      "x": 608,
+      "y": 446,
+      "zone": "Long",
+      "description": "The extended path from Mid, leading to Arch and Library."
+    },
+    {
+      "name": "A Site",
+      "x": 646,
+      "y": 548,
+      "zone": "A Site",
+      "description": "The standard bomb plant area at A."
+    },
+    {
+      "name": "Back Site",
+      "x": 633,
+      "y": 514,
+      "zone": "Back Site",
+      "description": "The closed part of the A Site where CTs or Ts can hide behind boxes in post-plant situations."
+    },
+    {
+      "name": "Cemetery",
+      "x": 733,
+      "y": 638,
+      "zone": "Cemetery",
+      "description": "The large stone wall that CTs often hide behind when controlling A Site."
+    },
+    {
+      "name": "Truck",
+      "x": 627,
+      "y": 633,
+      "zone": "Truck",
+      "description": "The Short truck jump spot for getting onto Balcony and into CT Apps. Also known as Cart."
+    },
+    {
+      "name": "Graveyard",
+      "x": 730,
+      "y": 574,
+      "zone": "Graveyard",
+      "description": "The sneaky spot right next to Pit. Perfect for defenders looking to surprise attackers as they push onto the site."
+    },
+    {
+      "name": "Library",
+      "x": 733,
+      "y": 444,
+      "zone": "Library",
+      "description": "The rotation point for CTs, providing vision toward A Site."
+    },
+    {
+      "name": "Kitchen",
+      "x": 724,
+      "y": 393,
+      "zone": "Kitchen",
+      "description": "The room between CT Spawn and Library."
+    },
+    {
+      "name": "Moto",
+      "x": 719,
+      "y": 480,
+      "zone": "Moto",
+      "description": "The small ledge between Library and A Site, often used as cover for defenders."
+    },
+    {
+      "name": "Arch",
+      "x": 622,
+      "y": 398,
+      "zone": "Arch",
+      "description": "The rotation area that connects Mid to Library and CT Spawn."
+    },
+    {
+      "name": "Speedway",
+      "x": 591,
+      "y": 283,
+      "zone": "Speedway",
+      "description": "The narrow passageway from Arch to the B Site side, which is generally used by CTs."
+    },
+    {
+      "name": "CT Spawn",
+      "x": 716,
+      "y": 277,
+      "zone": "CT Spawn",
+      "description": "The Counter-Terrorist starting position."
+    },
+    {
+      "name": "Well",
+      "x": 642,
+      "y": 215,
+      "zone": "Well",
+      "description": "The well just outside CT Spawn toward B."
+    },
+    {
+      "name": "Banana",
+      "x": 387,
+      "y": 340,
+      "zone": "Banana",
+      "description": "The long, curved path leading from T Spawn to B Site. Heavily contested during the early round."
+    },
+    {
+      "name": "Logs",
+      "x": 323,
+      "y": 405,
+      "zone": "Logs",
+      "description": "The small corner on Banana, near T Ramp, that allows for fast pushes."
+    },
+    {
+      "name": "Sand Bags",
+      "x": 453,
+      "y": 320,
+      "zone": "Sand Bags",
+      "description": "Positioned on Banana, often used for holding aggressive angles."
+    },
+    {
+      "name": "Car",
+      "x": 407,
+      "y": 288,
+      "zone": "Car",
+      "description": "The position along Banana, providing cover for defenders trying to hold mid-round control."
+    },
+    {
+      "name": "Church",
+      "x": 491,
+      "y": 125,
+      "zone": "Church",
+      "description": "The area near CT Spawn leading toward B Site, often used for retakes. Also known as Constructions."
+    },
+    {
+      "name": "Garden",
+      "x": 403,
+      "y": 72,
+      "zone": "Garden",
+      "description": "The garden area just outside Church leading to B Site."
+    },
+    {
+      "name": "B Site",
+      "x": 381,
+      "y": 150,
+      "zone": "B Site",
+      "description": "The standard bomb plant area at B."
+    },
+    {
+      "name": "Fountain",
+      "x": 386,
+      "y": 181,
+      "zone": "Fountain",
+      "description": "The center of B Site, where players often take cover while planting the bomb."
+    },
+    {
+      "name": "Coffins",
+      "x": 405,
+      "y": 124,
+      "zone": "Coffins",
+      "description": "The defensive spot at the back of B Site, near the bomb plant zone."
+    },
+    {
+      "name": "Dark",
+      "x": 337,
+      "y": 110,
+      "zone": "Dark",
+      "description": "The tucked-in corner at the back of B Site, great for surprise plays."
+    },
+    {
+      "name": "1st",
+      "x": 419,
+      "y": 227,
+      "zone": "1st",
+      "description": "The stack of boxes on B Site that players use for cover. Also known as First Oranges."
+    },
+    {
+      "name": "2nd",
+      "x": 369,
+      "y": 227,
+      "zone": "2nd",
+      "description": "Another box stack close to the bomb site, often checked by attackers during executes. Also known as Second Oranges."
+    },
+    {
+      "name": "CT",
+      "x": 527,
+      "y": 189,
+      "zone": "CT",
+      "description": "The open area from which CT-side players most often appear when they push B."
+    },
+    {
+      "name": "Boost",
+      "x": 502,
+      "y": 207,
+      "zone": "Boost",
+      "description": "The position that requires a teammate’s help to reach, often used to catch enemies off guard."
+    }
+  ],
+  "zones": [
+    {
+      "name": "T Spawn",
+      "polygon": [
+        [
+          45,
+          485
+        ],
+        [
+          106,
+          473
+        ],
+        [
+          111,
+          520
+        ],
+        [
+          195,
+          520
+        ],
+        [
+          196,
+          484
+        ],
+        [
+          228,
+          484
+        ],
+        [
+          230,
+          696
+        ],
+        [
+          126,
+          697
+        ],
+        [
+          120,
+          656
+        ],
+        [
+          83,
+          652
+        ],
+        [
+          71,
+          633
+        ],
+        [
+          47,
+          630
+        ]
+      ],
+      "centroid": {
+        "x": 130,
+        "y": 577
+      },
+      "type": "spawn"
+    },
+    {
+      "name": "Living Room",
+      "polygon": [
+        [
+          234,
+          552
+        ],
+        [
+          342,
+          552
+        ],
+        [
+          342,
+          577
+        ],
+        [
+          311,
+          577
+        ],
+        [
+          310,
+          611
+        ],
+        [
+          234,
+          610
+        ]
+      ],
+      "centroid": {
+        "x": 296,
+        "y": 580
+      },
+      "type": "area"
+    },
+    {
+      "name": "Second Mid",
+      "polygon": [
+        [
+          229,
+          612
+        ],
+        [
+          309,
+          615
+        ],
+        [
+          371,
+          618
+        ],
+        [
+          383,
+          610
+        ],
+        [
+          485,
+          608
+        ],
+        [
+          484,
+          668
+        ],
+        [
+          455,
+          661
+        ],
+        [
+          375,
+          653
+        ],
+        [
+          314,
+          651
+        ],
+        [
+          314,
+          661
+        ],
+        [
+          231,
+          659
+        ]
+      ],
+      "centroid": {
+        "x": 359,
+        "y": 638
+      },
+      "type": "connector"
+    },
+    {
+      "name": "Bridge",
+      "polygon": [
+        [
+          257,
+          612
+        ],
+        [
+          257,
+          657
+        ],
+        [
+          284,
+          657
+        ],
+        [
+          284,
+          610
+        ]
+      ],
+      "centroid": {
+        "x": 271,
+        "y": 634
+      },
+      "type": "area"
+    },
+    {
+      "name": "T Balcony",
+      "polygon": [
+        [
+          311,
+          579
+        ],
+        [
+          337,
+          580
+        ],
+        [
+          338,
+          591
+        ],
+        [
+          373,
+          590
+        ],
+        [
+          374,
+          613
+        ],
+        [
+          313,
+          613
+        ]
+      ],
+      "centroid": {
+        "x": 341,
+        "y": 594
+      },
+      "type": "area"
+    },
+    {
+      "name": "T Apps",
+      "polygon": [
+        [
+          257,
+          664
+        ],
+        [
+          304,
+          663
+        ],
+        [
+          304,
+          676
+        ],
+        [
+          371,
+          676
+        ],
+        [
+          372,
+          698
+        ],
+        [
+          299,
+          702
+        ],
+        [
+          282,
+          701
+        ],
+        [
+          279,
+          719
+        ],
+        [
+          257,
+          719
+        ]
+      ],
+      "centroid": {
+        "x": 303,
+        "y": 691
+      },
+      "type": "area"
+    },
+    {
+      "name": "T Ramp",
+      "polygon": [
+        [
+          264,
+          497
+        ],
+        [
+          264,
+          472
+        ],
+        [
+          361,
+          471
+        ],
+        [
+          361,
+          497
+        ]
+      ],
+      "centroid": {
+        "x": 313,
+        "y": 484
+      },
+      "type": "connector"
+    },
+    {
+      "name": "Ledge",
+      "polygon": [
+        [
+          238,
+          468
+        ],
+        [
+          239,
+          486
+        ],
+        [
+          263,
+          488
+        ],
+        [
+          262,
+          468
+        ]
+      ],
+      "centroid": {
+        "x": 251,
+        "y": 477
+      },
+      "type": "area"
+    },
+    {
+      "name": "Mid",
+      "polygon": [
+        [
+          536,
+          519
+        ],
+        [
+          535,
+          549
+        ],
+        [
+          442,
+          547
+        ],
+        [
+          381,
+          547
+        ],
+        [
+          335,
+          548
+        ],
+        [
+          334,
+          496
+        ],
+        [
+          394,
+          497
+        ],
+        [
+          394,
+          508
+        ],
+        [
+          416,
+          508
+        ],
+        [
+          415,
+          500
+        ],
+        [
+          461,
+          504
+        ],
+        [
+          485,
+          505
+        ],
+        [
+          487,
+          518
+        ]
+      ],
+      "centroid": {
+        "x": 432,
+        "y": 519
+      },
+      "type": "connector"
+    },
+    {
+      "name": "Underpass",
+      "polygon": [
+        [
+          370,
+          498
+        ],
+        [
+          371,
+          608
+        ],
+        [
+          383,
+          608
+        ],
+        [
+          382,
+          498
+        ]
+      ],
+      "centroid": {
+        "x": 377,
+        "y": 553
+      },
+      "type": "area"
+    },
+    {
+      "name": "Bottom Mid",
+      "polygon": [
+        [
+          331,
+          497
+        ],
+        [
+          331,
+          546
+        ],
+        [
+          365,
+          547
+        ],
+        [
+          365,
+          497
+        ]
+      ],
+      "centroid": {
+        "x": 348,
+        "y": 522
+      },
+      "type": "connector"
+    },
+    {
+      "name": "Top Mid",
+      "polygon": [
+        [
+          541,
+          482
+        ],
+        [
+          577,
+          483
+        ],
+        [
+          577,
+          577
+        ],
+        [
+          541,
+          577
+        ]
+      ],
+      "centroid": {
+        "x": 559,
+        "y": 530
+      },
+      "type": "connector"
+    },
+    {
+      "name": "Boiler",
+      "polygon": [
+        [
+          513,
+          557
+        ],
+        [
+          514,
+          581
+        ],
+        [
+          537,
+          583
+        ],
+        [
+          536,
+          556
+        ]
+      ],
+      "centroid": {
+        "x": 525,
+        "y": 569
+      },
+      "type": "area"
+    },
+    {
+      "name": "Stairs",
+      "polygon": [
+        [
+          468,
+          569
+        ],
+        [
+          467,
+          605
+        ],
+        [
+          489,
+          606
+        ],
+        [
+          488,
+          569
+        ]
+      ],
+      "centroid": {
+        "x": 478,
+        "y": 587
+      },
+      "type": "area"
+    },
+    {
+      "name": "Window",
+      "polygon": [
+        [
+          471,
+          618
+        ],
+        [
+          472,
+          649
+        ],
+        [
+          488,
+          647
+        ],
+        [
+          487,
+          617
+        ]
+      ],
+      "centroid": {
+        "x": 480,
+        "y": 633
+      },
+      "type": "area"
+    },
+    {
+      "name": "Back Alley",
+      "polygon": [
+        [
+          372,
+          711
+        ],
+        [
+          453,
+          711
+        ],
+        [
+          453,
+          737
+        ],
+        [
+          373,
+          731
+        ]
+      ],
+      "centroid": {
+        "x": 413,
+        "y": 722
+      },
+      "type": "connector"
+    },
+    {
+      "name": "Apartments",
+      "polygon": [
+        [
+          516,
+          603
+        ],
+        [
+          539,
+          601
+        ],
+        [
+          538,
+          658
+        ],
+        [
+          623,
+          658
+        ],
+        [
+          625,
+          638
+        ],
+        [
+          657,
+          637
+        ],
+        [
+          658,
+          657
+        ],
+        [
+          640,
+          656
+        ],
+        [
+          641,
+          678
+        ],
+        [
+          507,
+          678
+        ],
+        [
+          507,
+          656
+        ],
+        [
+          517,
+          656
+        ]
+      ],
+      "centroid": {
+        "x": 581,
+        "y": 648
+      },
+      "type": "area"
+    },
+    {
+      "name": "Pit",
+      "polygon": [
+        [
+          660,
+          638
+        ],
+        [
+          755,
+          629
+        ],
+        [
+          755,
+          691
+        ],
+        [
+          730,
+          700
+        ],
+        [
+          657,
+          703
+        ]
+      ],
+      "centroid": {
+        "x": 712,
+        "y": 672
+      },
+      "type": "area"
+    },
+    {
+      "name": "Balcony",
+      "polygon": [
+        [
+          657,
+          636
+        ],
+        [
+          674,
+          637
+        ],
+        [
+          675,
+          676
+        ],
+        [
+          658,
+          677
+        ]
+      ],
+      "centroid": {
+        "x": 666,
+        "y": 656
+      },
+      "type": "area"
+    },
+    {
+      "name": "Short",
+      "polygon": [
+        [
+          655,
+          592
+        ],
+        [
+          655,
+          636
+        ],
+        [
+          543,
+          636
+        ],
+        [
+          542,
+          583
+        ],
+        [
+          573,
+          579
+        ],
+        [
+          572,
+          590
+        ]
+      ],
+      "centroid": {
+        "x": 590,
+        "y": 602
+      },
+      "type": "connector"
+    },
+    {
+      "name": "Long",
+      "polygon": [
+        [
+          575,
+          477
+        ],
+        [
+          548,
+          477
+        ],
+        [
+          549,
+          430
+        ],
+        [
+          535,
+          428
+        ],
+        [
+          534,
+          413
+        ],
+        [
+          545,
+          414
+        ],
+        [
+          548,
+          417
+        ],
+        [
+          717,
+          419
+        ],
+        [
+          718,
+          462
+        ],
+        [
+          579,
+          459
+        ]
+      ],
+      "centroid": {
+        "x": 585,
+        "y": 439
+      },
+      "type": "connector"
+    },
+    {
+      "name": "A Site",
+      "polygon": [
+        [
+          617,
+          500
+        ],
+        [
+          616,
+          587
+        ],
+        [
+          673,
+          587
+        ],
+        [
+          673,
+          501
+        ]
+      ],
+      "centroid": {
+        "x": 645,
+        "y": 544
+      },
+      "type": "site"
+    },
+    {
+      "name": "Back Site",
+      "polygon": [
+        [
+          616,
+          500
+        ],
+        [
+          617,
+          521
+        ],
+        [
+          674,
+          522
+        ],
+        [
+          674,
+          501
+        ]
+      ],
+      "centroid": {
+        "x": 645,
+        "y": 511
+      },
+      "type": "site"
+    },
+    {
+      "name": "Cemetery",
+      "polygon": [
+        [
+          722,
+          618
+        ],
+        [
+          720,
+          647
+        ],
+        [
+          754,
+          647
+        ],
+        [
+          754,
+          616
+        ]
+      ],
+      "centroid": {
+        "x": 738,
+        "y": 632
+      },
+      "type": "area"
+    },
+    {
+      "name": "Truck",
+      "polygon": [
+        [
+          621,
+          617
+        ],
+        [
+          621,
+          636
+        ],
+        [
+          670,
+          637
+        ],
+        [
+          670,
+          617
+        ]
+      ],
+      "centroid": {
+        "x": 646,
+        "y": 627
+      },
+      "type": "area"
+    },
+    {
+      "name": "Graveyard",
+      "polygon": [
+        [
+          717,
+          526
+        ],
+        [
+          717,
+          613
+        ],
+        [
+          756,
+          615
+        ],
+        [
+          754,
+          553
+        ],
+        [
+          747,
+          553
+        ],
+        [
+          747,
+          526
+        ]
+      ],
+      "centroid": {
+        "x": 740,
+        "y": 564
+      },
+      "type": "area"
+    },
+    {
+      "name": "Library",
+      "polygon": [
+        [
+          719,
+          407
+        ],
+        [
+          721,
+          449
+        ],
+        [
+          762,
+          449
+        ],
+        [
+          761,
+          406
+        ]
+      ],
+      "centroid": {
+        "x": 741,
+        "y": 428
+      },
+      "type": "area"
+    },
+    {
+      "name": "Kitchen",
+      "polygon": [
+        [
+          694,
+          366
+        ],
+        [
+          751,
+          365
+        ],
+        [
+          750,
+          402
+        ],
+        [
+          693,
+          403
+        ]
+      ],
+      "centroid": {
+        "x": 722,
+        "y": 384
+      },
+      "type": "area"
+    },
+    {
+      "name": "Moto",
+      "polygon": [
+        [
+          734,
+          459
+        ],
+        [
+          734,
+          476
+        ],
+        [
+          709,
+          475
+        ],
+        [
+          708,
+          458
+        ]
+      ],
+      "centroid": {
+        "x": 721,
+        "y": 467
+      },
+      "type": "area"
+    },
+    {
+      "name": "Arch",
+      "polygon": [
+        [
+          612,
+          363
+        ],
+        [
+          635,
+          363
+        ],
+        [
+          635,
+          415
+        ],
+        [
+          611,
+          415
+        ]
+      ],
+      "centroid": {
+        "x": 623,
+        "y": 389
+      },
+      "type": "area"
+    },
+    {
+      "name": "Speedway",
+      "polygon": [
+        [
+          588,
+          185
+        ],
+        [
+          609,
+          183
+        ],
+        [
+          611,
+          361
+        ],
+        [
+          588,
+          361
+        ]
+      ],
+      "centroid": {
+        "x": 599,
+        "y": 272
+      },
+      "type": "area"
+    },
+    {
+      "name": "CT Spawn",
+      "polygon": [
+        [
+          693,
+          222
+        ],
+        [
+          691,
+          333
+        ],
+        [
+          722,
+          336
+        ],
+        [
+          737,
+          307
+        ],
+        [
+          744,
+          229
+        ]
+      ],
+      "centroid": {
+        "x": 718,
+        "y": 285
+      },
+      "type": "spawn"
+    },
+    {
+      "name": "Well",
+      "polygon": [
+        [
+          634,
+          197
+        ],
+        [
+          630,
+          215
+        ],
+        [
+          653,
+          224
+        ],
+        [
+          657,
+          203
+        ]
+      ],
+      "centroid": {
+        "x": 644,
+        "y": 210
+      },
+      "type": "area"
+    },
+    {
+      "name": "Banana",
+      "polygon": [
+        [
+          341,
+          448
+        ],
+        [
+          365,
+          448
+        ],
+        [
+          365,
+          428
+        ],
+        [
+          380,
+          428
+        ],
+        [
+          381,
+          394
+        ],
+        [
+          373,
+          389
+        ],
+        [
+          411,
+          323
+        ],
+        [
+          477,
+          324
+        ],
+        [
+          494,
+          327
+        ],
+        [
+          493,
+          307
+        ],
+        [
+          485,
+          307
+        ],
+        [
+          486,
+          265
+        ],
+        [
+          438,
+          259
+        ],
+        [
+          437,
+          274
+        ],
+        [
+          394,
+          274
+        ],
+        [
+          335,
+          389
+        ],
+        [
+          317,
+          385
+        ],
+        [
+          317,
+          408
+        ],
+        [
+          341,
+          408
+        ]
+      ],
+      "centroid": {
+        "x": 402,
+        "y": 357
+      },
+      "type": "area"
+    },
+    {
+      "name": "Logs",
+      "polygon": [
+        [
+          315,
+          384
+        ],
+        [
+          314,
+          409
+        ],
+        [
+          340,
+          408
+        ],
+        [
+          336,
+          388
+        ]
+      ],
+      "centroid": {
+        "x": 326,
+        "y": 397
+      },
+      "type": "area"
+    },
+    {
+      "name": "Sand Bags",
+      "polygon": [
+        [
+          428,
+          303
+        ],
+        [
+          429,
+          324
+        ],
+        [
+          477,
+          324
+        ],
+        [
+          476,
+          303
+        ]
+      ],
+      "centroid": {
+        "x": 453,
+        "y": 313
+      },
+      "type": "area"
+    },
+    {
+      "name": "Car",
+      "polygon": [
+        [
+          393,
+          273
+        ],
+        [
+          383,
+          293
+        ],
+        [
+          430,
+          293
+        ],
+        [
+          427,
+          274
+        ]
+      ],
+      "centroid": {
+        "x": 408,
+        "y": 283
+      },
+      "type": "area"
+    },
+    {
+      "name": "Church",
+      "polygon": [
+        [
+          437,
+          42
+        ],
+        [
+          465,
+          42
+        ],
+        [
+          464,
+          61
+        ],
+        [
+          474,
+          58
+        ],
+        [
+          502,
+          58
+        ],
+        [
+          504,
+          93
+        ],
+        [
+          545,
+          93
+        ],
+        [
+          546,
+          131
+        ],
+        [
+          429,
+          133
+        ],
+        [
+          426,
+          90
+        ],
+        [
+          469,
+          92
+        ],
+        [
+          466,
+          83
+        ],
+        [
+          436,
+          83
+        ]
+      ],
+      "centroid": {
+        "x": 474,
+        "y": 81
+      },
+      "type": "area"
+    },
+    {
+      "name": "Garden",
+      "polygon": [
+        [
+          392,
+          42
+        ],
+        [
+          429,
+          42
+        ],
+        [
+          423,
+          107
+        ],
+        [
+          394,
+          107
+        ]
+      ],
+      "centroid": {
+        "x": 410,
+        "y": 74
+      },
+      "type": "area"
+    },
+    {
+      "name": "B Site",
+      "polygon": [
+        [
+          352,
+          136
+        ],
+        [
+          419,
+          136
+        ],
+        [
+          419,
+          148
+        ],
+        [
+          424,
+          157
+        ],
+        [
+          425,
+          204
+        ],
+        [
+          417,
+          206
+        ],
+        [
+          414,
+          212
+        ],
+        [
+          353,
+          211
+        ]
+      ],
+      "centroid": {
+        "x": 403,
+        "y": 176
+      },
+      "type": "site"
+    },
+    {
+      "name": "Fountain",
+      "polygon": [
+        [
+          389,
+          150
+        ],
+        [
+          363,
+          173
+        ],
+        [
+          389,
+          202
+        ],
+        [
+          415,
+          176
+        ]
+      ],
+      "centroid": {
+        "x": 389,
+        "y": 175
+      },
+      "type": "area"
+    },
+    {
+      "name": "Coffins",
+      "polygon": [
+        [
+          406,
+          108
+        ],
+        [
+          405,
+          133
+        ],
+        [
+          425,
+          135
+        ],
+        [
+          425,
+          107
+        ]
+      ],
+      "centroid": {
+        "x": 415,
+        "y": 121
+      },
+      "type": "area"
+    },
+    {
+      "name": "Dark",
+      "polygon": [
+        [
+          327,
+          96
+        ],
+        [
+          326,
+          118
+        ],
+        [
+          346,
+          117
+        ],
+        [
+          347,
+          97
+        ]
+      ],
+      "centroid": {
+        "x": 337,
+        "y": 107
+      },
+      "type": "area"
+    },
+    {
+      "name": "1st",
+      "polygon": [
+        [
+          405,
+          210
+        ],
+        [
+          405,
+          231
+        ],
+        [
+          434,
+          232
+        ],
+        [
+          433,
+          210
+        ]
+      ],
+      "centroid": {
+        "x": 419,
+        "y": 221
+      },
+      "type": "area"
+    },
+    {
+      "name": "2nd",
+      "polygon": [
+        [
+          354,
+          214
+        ],
+        [
+          354,
+          231
+        ],
+        [
+          386,
+          231
+        ],
+        [
+          388,
+          213
+        ]
+      ],
+      "centroid": {
+        "x": 371,
+        "y": 222
+      },
+      "type": "area"
+    },
+    {
+      "name": "CT",
+      "polygon": [
+        [
+          475,
+          171
+        ],
+        [
+          475,
+          200
+        ],
+        [
+          544,
+          200
+        ],
+        [
+          545,
+          168
+        ]
+      ],
+      "centroid": {
+        "x": 510,
+        "y": 185
+      },
+      "type": "area"
+    },
+    {
+      "name": "Boost",
+      "polygon": [
+        [
+          483,
+          190
+        ],
+        [
+          514,
+          190
+        ],
+        [
+          516,
+          200
+        ],
+        [
+          482,
+          201
+        ]
+      ],
+      "centroid": {
+        "x": 499,
+        "y": 195
+      },
+      "type": "area"
+    }
+  ],
+  "meta": {
+    "source": "https://community.skin.club/en/articles/inferno-callouts-cs2",
+    "calloutCount": 47
+  }
+}

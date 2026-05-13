@@ -1,0 +1,1645 @@
+{
+  "name": "dust2",
+  "displayName": "Dust2",
+  "viewBox": [
+    0,
+    0,
+    1024,
+    1024
+  ],
+  "sites": {
+    "A": {
+      "x": 629,
+      "y": 138
+    },
+    "B": {
+      "x": 167,
+      "y": 96
+    }
+  },
+  "spawns": {
+    "CT": {
+      "x": 488,
+      "y": 163
+    },
+    "T": {
+      "x": 355,
+      "y": 747
+    }
+  },
+  "callouts": [
+    {
+      "name": "T Spawn",
+      "x": 304,
+      "y": 736,
+      "zone": "T Spawn",
+      "description": "The area where the Terrorists spawn, offering access to A Long, Mid, and B Tunnels."
+    },
+    {
+      "name": "Suicide",
+      "x": 367,
+      "y": 614,
+      "zone": "Suicide",
+      "description": "The narrow pathway from T Spawn to Mid that exposes players to snipers through Mid Doors."
+    },
+    {
+      "name": "Outside Long",
+      "x": 514,
+      "y": 588,
+      "zone": "Outside Long",
+      "description": "The outdoor section by Long Doors on the T Spawn side, between T Spawn and A Long."
+    },
+    {
+      "name": "T Plat",
+      "x": 197,
+      "y": 661,
+      "zone": "T Plat",
+      "description": "The raised platform outside T Spawn on the way to B Tunnels, marked by several brick stacks that can be used to control B Tunnels. Also known as Titanic."
+    },
+    {
+      "name": "T Ramp",
+      "x": 75,
+      "y": 643,
+      "zone": "T Ramp",
+      "description": "The passageway from T Spawn to B Tunnels, allowing Ts to quickly run into the B Site."
+    },
+    {
+      "name": "Outside Tunnels",
+      "x": 138,
+      "y": 521,
+      "zone": "Outside Tunnels",
+      "description": "The large area near Upper Tunnels and T Spawn."
+    },
+    {
+      "name": "Upper Tunnels",
+      "x": 103,
+      "y": 355,
+      "zone": "Upper Tunnels",
+      "description": "The upper part of the tunnel network connecting Mid and B Site."
+    },
+    {
+      "name": "Lower Tunnels",
+      "x": 283,
+      "y": 316,
+      "zone": "Lower Tunnels",
+      "description": "The lower part of the tunnel network that connects B Tunnels and Mid."
+    },
+    {
+      "name": "B Site",
+      "x": 163,
+      "y": 90,
+      "zone": "B Site",
+      "description": "The bombsite located at the west side of the map where the bomb can be planted."
+    },
+    {
+      "name": "B Window",
+      "x": 259,
+      "y": 67,
+      "zone": "B Window",
+      "description": "The window on B Site that provides vision into the site from the platform."
+    },
+    {
+      "name": "Scaffolding",
+      "x": 353,
+      "y": 96,
+      "zone": "Scaffolding",
+      "description": "The structure next to the B Window that can be climbed on to protect the B Site."
+    },
+    {
+      "name": "Back Plat",
+      "x": 92,
+      "y": 42,
+      "zone": "Back Plat",
+      "description": "The defensive position at the far back of B Site, usually used to hold the window or B Tunnels push."
+    },
+    {
+      "name": "B Plat",
+      "x": 95,
+      "y": 101,
+      "zone": "B Plat",
+      "description": "The higher platform on B site beside the plant area, across from where players come out of B Tunnels."
+    },
+    {
+      "name": "Big Box",
+      "x": 122,
+      "y": 161,
+      "zone": "Big Box",
+      "description": "The large crate near the entrance of B Site from B Tunnels, offering cover for defenders."
+    },
+    {
+      "name": "B Car",
+      "x": 166,
+      "y": 254,
+      "zone": "B Car",
+      "description": "The common defensive position near B Site, used to watch for pushes from Tunnels or B Main."
+    },
+    {
+      "name": "Fence",
+      "x": 69,
+      "y": 197,
+      "zone": "Fence",
+      "description": "The fenced area on B Site that can be used as a hidden spot, only visible to Ts once they come out onto site from Tunnels."
+    },
+    {
+      "name": "B Doors",
+      "x": 204,
+      "y": 191,
+      "zone": "B Doors",
+      "description": "The double doors leading into B Site from CT Spawn."
+    },
+    {
+      "name": "CT Mid",
+      "x": 334,
+      "y": 170,
+      "zone": "CT Mid",
+      "description": "The area at the bottom of Mid, closer to CT Spawn, offering access to both A and B Sites."
+    },
+    {
+      "name": "B Boxes",
+      "x": 254,
+      "y": 259,
+      "zone": "B Boxes",
+      "description": "The set of boxes between CT Mid and B Doors, frequently used to spot or defend against players pushing from Mid into B."
+    },
+    {
+      "name": "Mid Doors",
+      "x": 368,
+      "y": 278,
+      "zone": "Mid Doors",
+      "description": "The double doors at Mid, providing vision and access between Mid and T Spawn or CT Spawn."
+    },
+    {
+      "name": "Xbox",
+      "x": 375,
+      "y": 325,
+      "zone": "Xbox",
+      "description": "The large crate in Mid used to boost players up to Catwalk and A Short."
+    },
+    {
+      "name": "Mid",
+      "x": 369,
+      "y": 405,
+      "zone": "Mid",
+      "description": "The central open area of Dust 2, connecting both A and B Sites."
+    },
+    {
+      "name": "Top Mid",
+      "x": 368,
+      "y": 509,
+      "zone": "Top Mid",
+      "description": "The elevated area at the top of Mid, closer to T Spawn."
+    },
+    {
+      "name": "Palm",
+      "x": 399,
+      "y": 479,
+      "zone": "Palm",
+      "description": "The position next to Catwalk and Mid where the palm tree used to be."
+    },
+    {
+      "name": "Catwalk",
+      "x": 413,
+      "y": 384,
+      "zone": "Catwalk",
+      "description": "The upper path that leads from Mid to A Short."
+    },
+    {
+      "name": "Long Doors",
+      "x": 557,
+      "y": 472,
+      "zone": "Long Doors",
+      "description": "The double doors at the entrance of A Long, separating A Long from T Spawn."
+    },
+    {
+      "name": "Blue",
+      "x": 588,
+      "y": 376,
+      "zone": "Blue",
+      "description": "The blue shipping crate facing A Long Doors."
+    },
+    {
+      "name": "Side Pit",
+      "x": 632,
+      "y": 491,
+      "zone": "Side Pit",
+      "description": "The space between Pit and A Long Doors, distinguished from Pit by the start of the slope and the low brick wall."
+    },
+    {
+      "name": "Pit",
+      "x": 691,
+      "y": 497,
+      "zone": "Pit",
+      "description": "The low-ground area to the right of A Site. Often used by defenders or attackers to get cover before committing to the bombsite push."
+    },
+    {
+      "name": "Pit Plat",
+      "x": 741,
+      "y": 453,
+      "zone": "Pit Plat",
+      "description": "The platform on Pit’s right side from the bottom viewpoint, giving players solid sniper coverage over A Site."
+    },
+    {
+      "name": "A Long",
+      "x": 687,
+      "y": 304,
+      "zone": "A Long",
+      "description": "The long corridor extending from T Spawn to A Site."
+    },
+    {
+      "name": "A Car",
+      "x": 739,
+      "y": 207,
+      "zone": "A Car",
+      "description": "The standard defensive position located at the corner of A Long, often used to hold against pushes from A Short and A Long."
+    },
+    {
+      "name": "A Cross",
+      "x": 670,
+      "y": 197,
+      "zone": "A Cross",
+      "description": "The open space between A Long and A Site, exposed to angles from Site, CT Spawn, and Short."
+    },
+    {
+      "name": "A Short",
+      "x": 478,
+      "y": 329,
+      "zone": "A Short",
+      "description": "The small pathway connecting Mid and A Site, frequently used by Ts to push A Site."
+    },
+    {
+      "name": "A Ramp",
+      "x": 708,
+      "y": 101,
+      "zone": "A Ramp",
+      "description": "The sloped pathway that leads up to A Site from A Long."
+    },
+    {
+      "name": "A Site",
+      "x": 637,
+      "y": 134,
+      "zone": "A Site",
+      "description": "The bombsite located at the east side of the map where the bomb can be planted."
+    },
+    {
+      "name": "Goose",
+      "x": 636,
+      "y": 56,
+      "zone": "Goose",
+      "description": "The tucked corner on A Site, right behind A Ramp, popular for defenders waiting for enemies."
+    },
+    {
+      "name": "A Plat",
+      "x": 555,
+      "y": 131,
+      "zone": "A Plat",
+      "description": "The raised area where the A bombsite is located, usually meaning the section between the site itself and A Short."
+    },
+    {
+      "name": "Ninja",
+      "x": 554,
+      "y": 89,
+      "zone": "Ninja",
+      "description": "The hidden spot next to the A Site boxes where defenders can hide or attempt sneaky defuses."
+    },
+    {
+      "name": "CT Spawn",
+      "x": 488,
+      "y": 165,
+      "zone": "CT Spawn",
+      "description": "The area where the Counter-Terrorists spawn, providing access to both A and B Sites."
+    },
+    {
+      "name": "Short Boost",
+      "x": 563,
+      "y": 164,
+      "zone": "Short Boost",
+      "description": "The few boxes that can be used to quickly get to Short for CTs."
+    },
+    {
+      "name": "Elevator",
+      "x": 592,
+      "y": 248,
+      "zone": "Elevator",
+      "description": "The area at the bottom of A Site near CT Spawn where players can boost each other up to A Site."
+    },
+    {
+      "name": "Stairs",
+      "x": 505,
+      "y": 279,
+      "zone": "Stairs",
+      "description": "The set of steps between Catwalk and A Short."
+    }
+  ],
+  "zones": [
+    {
+      "name": "T Spawn",
+      "polygon": [
+        [
+          43,
+          685
+        ],
+        [
+          521,
+          686
+        ],
+        [
+          520,
+          754
+        ],
+        [
+          474,
+          753
+        ],
+        [
+          473,
+          783
+        ],
+        [
+          379,
+          783
+        ],
+        [
+          383,
+          766
+        ],
+        [
+          44,
+          765
+        ]
+      ],
+      "centroid": {
+        "x": 355,
+        "y": 747
+      },
+      "type": "spawn"
+    },
+    {
+      "name": "Suicide",
+      "polygon": [
+        [
+          348,
+          684
+        ],
+        [
+          349,
+          537
+        ],
+        [
+          370,
+          535
+        ],
+        [
+          374,
+          685
+        ]
+      ],
+      "centroid": {
+        "x": 360,
+        "y": 611
+      },
+      "type": "area"
+    },
+    {
+      "name": "Outside Long",
+      "polygon": [
+        [
+          460,
+          534
+        ],
+        [
+          575,
+          530
+        ],
+        [
+          578,
+          645
+        ],
+        [
+          458,
+          637
+        ]
+      ],
+      "centroid": {
+        "x": 518,
+        "y": 587
+      },
+      "type": "connector"
+    },
+    {
+      "name": "T Plat",
+      "polygon": [
+        [
+          122,
+          596
+        ],
+        [
+          190,
+          596
+        ],
+        [
+          189,
+          607
+        ],
+        [
+          200,
+          619
+        ],
+        [
+          233,
+          618
+        ],
+        [
+          235,
+          601
+        ],
+        [
+          268,
+          601
+        ],
+        [
+          268,
+          683
+        ],
+        [
+          120,
+          683
+        ]
+      ],
+      "centroid": {
+        "x": 203,
+        "y": 623
+      },
+      "type": "area"
+    },
+    {
+      "name": "T Ramp",
+      "polygon": [
+        [
+          70,
+          593
+        ],
+        [
+          119,
+          592
+        ],
+        [
+          117,
+          681
+        ],
+        [
+          48,
+          683
+        ],
+        [
+          71,
+          659
+        ]
+      ],
+      "centroid": {
+        "x": 85,
+        "y": 642
+      },
+      "type": "connector"
+    },
+    {
+      "name": "Outside Tunnels",
+      "polygon": [
+        [
+          73,
+          591
+        ],
+        [
+          186,
+          591
+        ],
+        [
+          192,
+          578
+        ],
+        [
+          203,
+          568
+        ],
+        [
+          218,
+          567
+        ],
+        [
+          208,
+          482
+        ],
+        [
+          207,
+          466
+        ],
+        [
+          192,
+          466
+        ],
+        [
+          190,
+          449
+        ],
+        [
+          155,
+          448
+        ],
+        [
+          155,
+          406
+        ],
+        [
+          132,
+          406
+        ],
+        [
+          135,
+          449
+        ],
+        [
+          97,
+          449
+        ],
+        [
+          95,
+          464
+        ],
+        [
+          73,
+          463
+        ]
+      ],
+      "centroid": {
+        "x": 157,
+        "y": 491
+      },
+      "type": "connector"
+    },
+    {
+      "name": "Upper Tunnels",
+      "polygon": [
+        [
+          50,
+          324
+        ],
+        [
+          145,
+          325
+        ],
+        [
+          146,
+          347
+        ],
+        [
+          215,
+          347
+        ],
+        [
+          214,
+          392
+        ],
+        [
+          168,
+          392
+        ],
+        [
+          165,
+          403
+        ],
+        [
+          110,
+          404
+        ],
+        [
+          107,
+          394
+        ],
+        [
+          50,
+          393
+        ]
+      ],
+      "centroid": {
+        "x": 137,
+        "y": 372
+      },
+      "type": "connector"
+    },
+    {
+      "name": "Lower Tunnels",
+      "polygon": [
+        [
+          221,
+          299
+        ],
+        [
+          340,
+          300
+        ],
+        [
+          340,
+          344
+        ],
+        [
+          221,
+          341
+        ]
+      ],
+      "centroid": {
+        "x": 281,
+        "y": 321
+      },
+      "type": "connector"
+    },
+    {
+      "name": "B Site",
+      "polygon": [
+        [
+          132,
+          61
+        ],
+        [
+          132,
+          137
+        ],
+        [
+          201,
+          138
+        ],
+        [
+          199,
+          78
+        ],
+        [
+          169,
+          62
+        ]
+      ],
+      "centroid": {
+        "x": 167,
+        "y": 96
+      },
+      "type": "site"
+    },
+    {
+      "name": "B Window",
+      "polygon": [
+        [
+          195,
+          93
+        ],
+        [
+          195,
+          115
+        ],
+        [
+          221,
+          115
+        ],
+        [
+          220,
+          92
+        ]
+      ],
+      "centroid": {
+        "x": 208,
+        "y": 104
+      },
+      "type": "area"
+    },
+    {
+      "name": "Scaffolding",
+      "polygon": [
+        [
+          233,
+          90
+        ],
+        [
+          253,
+          89
+        ],
+        [
+          253,
+          114
+        ],
+        [
+          234,
+          116
+        ]
+      ],
+      "centroid": {
+        "x": 243,
+        "y": 103
+      },
+      "type": "area"
+    },
+    {
+      "name": "Back Plat",
+      "polygon": [
+        [
+          61,
+          12
+        ],
+        [
+          105,
+          13
+        ],
+        [
+          105,
+          63
+        ],
+        [
+          60,
+          62
+        ]
+      ],
+      "centroid": {
+        "x": 83,
+        "y": 38
+      },
+      "type": "area"
+    },
+    {
+      "name": "B Plat",
+      "polygon": [
+        [
+          62,
+          64
+        ],
+        [
+          130,
+          64
+        ],
+        [
+          129,
+          142
+        ],
+        [
+          60,
+          142
+        ]
+      ],
+      "centroid": {
+        "x": 95,
+        "y": 103
+      },
+      "type": "area"
+    },
+    {
+      "name": "Big Box",
+      "polygon": [
+        [
+          105,
+          142
+        ],
+        [
+          106,
+          167
+        ],
+        [
+          129,
+          165
+        ],
+        [
+          130,
+          142
+        ]
+      ],
+      "centroid": {
+        "x": 118,
+        "y": 154
+      },
+      "type": "area"
+    },
+    {
+      "name": "B Car",
+      "polygon": [
+        [
+          124,
+          248
+        ],
+        [
+          197,
+          210
+        ],
+        [
+          197,
+          239
+        ],
+        [
+          164,
+          269
+        ],
+        [
+          155,
+          288
+        ],
+        [
+          131,
+          288
+        ],
+        [
+          131,
+          257
+        ]
+      ],
+      "centroid": {
+        "x": 157,
+        "y": 257
+      },
+      "type": "area"
+    },
+    {
+      "name": "Fence",
+      "polygon": [
+        [
+          50,
+          145
+        ],
+        [
+          73,
+          147
+        ],
+        [
+          70,
+          255
+        ],
+        [
+          50,
+          255
+        ]
+      ],
+      "centroid": {
+        "x": 61,
+        "y": 201
+      },
+      "type": "area"
+    },
+    {
+      "name": "B Doors",
+      "polygon": [
+        [
+          192,
+          162
+        ],
+        [
+          219,
+          163
+        ],
+        [
+          218,
+          206
+        ],
+        [
+          190,
+          206
+        ]
+      ],
+      "centroid": {
+        "x": 205,
+        "y": 185
+      },
+      "type": "area"
+    },
+    {
+      "name": "CT Mid",
+      "polygon": [
+        [
+          286,
+          117
+        ],
+        [
+          380,
+          116
+        ],
+        [
+          379,
+          222
+        ],
+        [
+          334,
+          223
+        ],
+        [
+          333,
+          206
+        ],
+        [
+          285,
+          207
+        ]
+      ],
+      "centroid": {
+        "x": 333,
+        "y": 182
+      },
+      "type": "connector"
+    },
+    {
+      "name": "B Boxes",
+      "polygon": [
+        [
+          227,
+          191
+        ],
+        [
+          256,
+          192
+        ],
+        [
+          253,
+          211
+        ],
+        [
+          226,
+          212
+        ]
+      ],
+      "centroid": {
+        "x": 241,
+        "y": 202
+      },
+      "type": "area"
+    },
+    {
+      "name": "Mid Doors",
+      "polygon": [
+        [
+          333,
+          267
+        ],
+        [
+          384,
+          267
+        ],
+        [
+          384,
+          306
+        ],
+        [
+          348,
+          307
+        ],
+        [
+          348,
+          279
+        ],
+        [
+          334,
+          279
+        ]
+      ],
+      "centroid": {
+        "x": 355,
+        "y": 284
+      },
+      "type": "connector"
+    },
+    {
+      "name": "Xbox",
+      "polygon": [
+        [
+          372,
+          311
+        ],
+        [
+          395,
+          312
+        ],
+        [
+          395,
+          330
+        ],
+        [
+          373,
+          331
+        ]
+      ],
+      "centroid": {
+        "x": 384,
+        "y": 321
+      },
+      "type": "area"
+    },
+    {
+      "name": "Mid",
+      "polygon": [
+        [
+          345,
+          340
+        ],
+        [
+          392,
+          339
+        ],
+        [
+          392,
+          464
+        ],
+        [
+          345,
+          465
+        ]
+      ],
+      "centroid": {
+        "x": 369,
+        "y": 402
+      },
+      "type": "connector"
+    },
+    {
+      "name": "Top Mid",
+      "polygon": [
+        [
+          308,
+          482
+        ],
+        [
+          420,
+          477
+        ],
+        [
+          428,
+          487
+        ],
+        [
+          425,
+          523
+        ],
+        [
+          384,
+          523
+        ],
+        [
+          366,
+          536
+        ],
+        [
+          347,
+          539
+        ],
+        [
+          316,
+          539
+        ]
+      ],
+      "centroid": {
+        "x": 374,
+        "y": 514
+      },
+      "type": "connector"
+    },
+    {
+      "name": "Palm",
+      "polygon": [
+        [
+          386,
+          464
+        ],
+        [
+          390,
+          486
+        ],
+        [
+          412,
+          484
+        ],
+        [
+          410,
+          458
+        ]
+      ],
+      "centroid": {
+        "x": 400,
+        "y": 473
+      },
+      "type": "area"
+    },
+    {
+      "name": "Catwalk",
+      "polygon": [
+        [
+          397,
+          302
+        ],
+        [
+          394,
+          443
+        ],
+        [
+          418,
+          446
+        ],
+        [
+          418,
+          302
+        ]
+      ],
+      "centroid": {
+        "x": 407,
+        "y": 374
+      },
+      "type": "connector"
+    },
+    {
+      "name": "Long Doors",
+      "polygon": [
+        [
+          528,
+          432
+        ],
+        [
+          577,
+          432
+        ],
+        [
+          577,
+          518
+        ],
+        [
+          530,
+          516
+        ]
+      ],
+      "centroid": {
+        "x": 553,
+        "y": 475
+      },
+      "type": "connector"
+    },
+    {
+      "name": "Blue",
+      "polygon": [
+        [
+          561,
+          356
+        ],
+        [
+          561,
+          384
+        ],
+        [
+          615,
+          384
+        ],
+        [
+          615,
+          356
+        ]
+      ],
+      "centroid": {
+        "x": 588,
+        "y": 370
+      },
+      "type": "area"
+    },
+    {
+      "name": "Side Pit",
+      "polygon": [
+        [
+          600,
+          439
+        ],
+        [
+          660,
+          439
+        ],
+        [
+          660,
+          538
+        ],
+        [
+          606,
+          537
+        ],
+        [
+          606,
+          451
+        ]
+      ],
+      "centroid": {
+        "x": 627,
+        "y": 481
+      },
+      "type": "area"
+    },
+    {
+      "name": "Pit",
+      "polygon": [
+        [
+          661,
+          438
+        ],
+        [
+          721,
+          439
+        ],
+        [
+          718,
+          546
+        ],
+        [
+          662,
+          546
+        ]
+      ],
+      "centroid": {
+        "x": 691,
+        "y": 493
+      },
+      "type": "area"
+    },
+    {
+      "name": "Pit Plat",
+      "polygon": [
+        [
+          721,
+          386
+        ],
+        [
+          756,
+          392
+        ],
+        [
+          755,
+          521
+        ],
+        [
+          722,
+          523
+        ]
+      ],
+      "centroid": {
+        "x": 739,
+        "y": 456
+      },
+      "type": "area"
+    },
+    {
+      "name": "A Long",
+      "polygon": [
+        [
+          656,
+          357
+        ],
+        [
+          720,
+          362
+        ],
+        [
+          722,
+          219
+        ],
+        [
+          659,
+          220
+        ]
+      ],
+      "centroid": {
+        "x": 689,
+        "y": 290
+      },
+      "type": "connector"
+    },
+    {
+      "name": "A Car",
+      "polygon": [
+        [
+          720,
+          168
+        ],
+        [
+          756,
+          170
+        ],
+        [
+          759,
+          250
+        ],
+        [
+          728,
+          256
+        ]
+      ],
+      "centroid": {
+        "x": 741,
+        "y": 211
+      },
+      "type": "area"
+    },
+    {
+      "name": "A Cross",
+      "polygon": [
+        [
+          641,
+          166
+        ],
+        [
+          697,
+          165
+        ],
+        [
+          691,
+          220
+        ],
+        [
+          637,
+          217
+        ]
+      ],
+      "centroid": {
+        "x": 667,
+        "y": 192
+      },
+      "type": "area"
+    },
+    {
+      "name": "A Short",
+      "polygon": [
+        [
+          427,
+          338
+        ],
+        [
+          422,
+          290
+        ],
+        [
+          451,
+          289
+        ],
+        [
+          450,
+          300
+        ],
+        [
+          483,
+          299
+        ],
+        [
+          483,
+          119
+        ],
+        [
+          529,
+          120
+        ],
+        [
+          529,
+          339
+        ]
+      ],
+      "centroid": {
+        "x": 472,
+        "y": 262
+      },
+      "type": "connector"
+    },
+    {
+      "name": "A Ramp",
+      "polygon": [
+        [
+          667,
+          26
+        ],
+        [
+          666,
+          161
+        ],
+        [
+          726,
+          165
+        ],
+        [
+          722,
+          26
+        ]
+      ],
+      "centroid": {
+        "x": 695,
+        "y": 95
+      },
+      "type": "connector"
+    },
+    {
+      "name": "A Site",
+      "polygon": [
+        [
+          606,
+          106
+        ],
+        [
+          661,
+          106
+        ],
+        [
+          656,
+          161
+        ],
+        [
+          623,
+          161
+        ],
+        [
+          619,
+          148
+        ],
+        [
+          607,
+          144
+        ]
+      ],
+      "centroid": {
+        "x": 629,
+        "y": 138
+      },
+      "type": "site"
+    },
+    {
+      "name": "Goose",
+      "polygon": [
+        [
+          618,
+          27
+        ],
+        [
+          657,
+          28
+        ],
+        [
+          657,
+          80
+        ],
+        [
+          617,
+          79
+        ]
+      ],
+      "centroid": {
+        "x": 637,
+        "y": 54
+      },
+      "type": "area"
+    },
+    {
+      "name": "A Plat",
+      "polygon": [
+        [
+          488,
+          98
+        ],
+        [
+          602,
+          98
+        ],
+        [
+          601,
+          143
+        ],
+        [
+          488,
+          145
+        ]
+      ],
+      "centroid": {
+        "x": 545,
+        "y": 121
+      },
+      "type": "area"
+    },
+    {
+      "name": "Ninja",
+      "polygon": [
+        [
+          535,
+          78
+        ],
+        [
+          536,
+          95
+        ],
+        [
+          569,
+          95
+        ],
+        [
+          571,
+          78
+        ]
+      ],
+      "centroid": {
+        "x": 553,
+        "y": 87
+      },
+      "type": "area"
+    },
+    {
+      "name": "CT Spawn",
+      "polygon": [
+        [
+          448,
+          120
+        ],
+        [
+          446,
+          205
+        ],
+        [
+          529,
+          204
+        ],
+        [
+          530,
+          122
+        ]
+      ],
+      "centroid": {
+        "x": 488,
+        "y": 163
+      },
+      "type": "spawn"
+    },
+    {
+      "name": "Short Boost",
+      "polygon": [
+        [
+          536,
+          149
+        ],
+        [
+          537,
+          170
+        ],
+        [
+          568,
+          169
+        ],
+        [
+          570,
+          149
+        ]
+      ],
+      "centroid": {
+        "x": 553,
+        "y": 160
+      },
+      "type": "connector"
+    },
+    {
+      "name": "Elevator",
+      "polygon": [
+        [
+          596,
+          151
+        ],
+        [
+          595,
+          173
+        ],
+        [
+          615,
+          173
+        ],
+        [
+          616,
+          151
+        ]
+      ],
+      "centroid": {
+        "x": 606,
+        "y": 162
+      },
+      "type": "area"
+    },
+    {
+      "name": "Stairs",
+      "polygon": [
+        [
+          482,
+          256
+        ],
+        [
+          529,
+          256
+        ],
+        [
+          528,
+          288
+        ],
+        [
+          481,
+          288
+        ]
+      ],
+      "centroid": {
+        "x": 505,
+        "y": 272
+      },
+      "type": "area"
+    }
+  ],
+  "meta": {
+    "source": "https://community.skin.club/en/articles/dust-2-callouts-cs2-2",
+    "calloutCount": 43
+  }
+}

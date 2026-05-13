@@ -38,8 +38,10 @@ next-env.d.ts
 *.db-wal
 *.db-shm
 
-# data
+# data (but keep map data for tactical SVG generation)
 /data/
+!data/maps/
 
-# Never commit data files
+# Never commit data files (except maps)
 data/
+!data/maps/

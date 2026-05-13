@@ -82,6 +82,12 @@ interface LoadedMap {
 /** Coordinates in JSON are 0-1000. Base SVG is 0-1024. */
 const SCALE = 1.024;
 
+/** Display scale factor: output SVG is 1.25x the base radar for better readability. */
+const DISPLAY_SCALE = 1.25;
+
+/** Output dimensions after DISPLAY_SCALE applied to 1024 base. */
+const OUTPUT_SIZE = Math.round(1024 * DISPLAY_SCALE); // 1280
+
 const ROLE_LETTER: Record<string, string> = {
   entry: "E",
   support: "S",
@@ -213,8 +219,13 @@ export function renderTacticalMap(options: TacticalMapOptions): string {
   const loaded = loadMap(mapName);
   const { data, baseSvg } = loaded;
 
-  // Strip closing </svg> from base to inject overlays
-  const svgBody = baseSvg.replace(/<\/svg>\s*$/, "");
+  // Strip the outer <svg> tag from the base to rebuild it with scaled dimensions
+  // The base SVG has viewBox="0 0 1024 1024" width="1024" height="1024"
+  // We extract only the inner content
+  const innerContent = baseSvg
+    .replace(/<\?xml[^?]*\?>\s*/g, "") // Remove XML declaration
+    .replace(/<svg[^>]*>/, "")          // Remove opening <svg> tag
+    .replace(/<\/svg>\s*$/, "");        // Remove closing </svg>
 
   const overlays: string[] = [];
 
@@ -432,8 +443,16 @@ export function renderTacticalMap(options: TacticalMapOptions): string {
   }
 
   // -- Compose final SVG --
-  // Insert overlays before closing </svg>
-  const finalSvg = svgBody + overlays.join("\n") + "\n</svg>";
+  // Wrap everything in a <g> with scale transform for x1.25 display
+  // ViewBox is 1280x1280 (1024 * 1.25), content is rendered at 1.25x
+  const finalSvg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${OUTPUT_SIZE} ${OUTPUT_SIZE}" width="${OUTPUT_SIZE}" height="${OUTPUT_SIZE}" role="img">
+  <title>Tactical Map: ${escXml(options.title || mapName)}</title>
+  <g transform="scale(${DISPLAY_SCALE})">
+    ${innerContent}
+    ${overlays.join("\n")}
+  </g>
+</svg>`;
 
   return finalSvg;
 }

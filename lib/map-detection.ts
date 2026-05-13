@@ -362,6 +362,567 @@ export function toRendererOptions(tactical: TacticalData) {
 }
 
 /**
+ * Get the list of known callout names for a map (loaded from JSON data).
+ * Returns an array of lowercase callout names.
+ */
+export function getCalloutNames(mapName: string): string[] {
+  const data = loadMapData(mapName);
+  if (!data) return [];
+  return data.callouts.map((c) => c.name.toLowerCase());
+}
+
+/**
+ * Get the raw map data (for external use).
+ */
+export function getMapData(mapName: string): MapData | null {
+  return loadMapData(mapName);
+}
+
+/**
+ * Extract tactical data from the LLM's free-text response using
+ * heuristic regex patterns (French and English).
+ *
+ * This is a FALLBACK when parseTacticalJSON() returns null — i.e. the LLM
+ * described positions/utility in prose but didn't output a JSON block.
+ *
+ * Strategy:
+ *  1. Load the map's known callouts.
+ *  2. Find callout mentions in the text.
+ *  3. Use surrounding context to classify as player position, utility target, etc.
+ *  4. Build a TacticalData object with whatever was extracted.
+ *
+ * Returns null if fewer than 1 callout is found (nothing useful to show).
+ */
+export function extractTacticalFromText(
+  response: string,
+  mapName: string
+): TacticalData | null {
+  const data = loadMapData(mapName);
+  if (!data || data.callouts.length === 0) return null;
+
+  // Build a lookup: lowercase name → canonical name
+  const calloutLookup = new Map<string, string>();
+  for (const c of data.callouts) {
+    calloutLookup.set(c.name.toLowerCase(), c.name);
+  }
+
+  const players: TacticalData["players"] = [];
+  const utility: TacticalData["utility"] = [];
+  const arrows: TacticalData["arrows"] = [];
+  const lines = response.split("\n");
+
+  // ---- Detect the side (CT or T) ----
+  const lowerResp = response.toLowerCase();
+  const isT =
+    /\b(t\s*side|terrorist|terro|attack|attaquant|execute|rush|default\s+t|side\s+t)\b/i.test(
+      lowerResp
+    ) ||
+    /\b(start|début|round)\b.*\b(t\b|terrorist)/i.test(lowerResp);
+  const isCT =
+    /\b(ct\s*side|counter|counter-terrorist|retake|défense|défendre)\b/i.test(
+      lowerResp
+    );
+  // If neither is clearly detected, check the question context or default to T
+  // (most "donne moi un start" questions are T-side executes)
+  const side: "CT" | "T" = isCT && !isT ? "CT" : "T";
+
+  // ---- Player position detection ----
+  // Patterns (French + English):
+  //   "**Joueur 1** : va vers Cave" / "Joueur 1 : Cave" / "**Joueur 1 :** Cave"
+  //   "Player 1: goes to Cave" / "Player 1: Cave"
+  //   "J1 : Cave" / "P1 : Cave"
+  //   "- Joueur 1 :" ... "position ... Cave"
+  //   "J1 -> Cave" / "P1 -> Cave"
+  // The pattern handles optional markdown bold (**), bold+colon, and various separators
+  const playerLinePattern =
+    /\*{0,2}\s*(?:joueur|player|j|p)\s*(\d+)\s*\*{0,2}\s*[:\-–)>]+\s*(.*?)(?:\n|$)/gi;
+
+  for (const line of lines) {
+    const m = Array.from(line.matchAll(playerLinePattern));
+    if (m.length === 0) continue;
+
+    for (const match of m) {
+      const playerNum = parseInt(match[1], 10);
+      if (playerNum < 1 || playerNum > 5) continue;
+      const rest = match[2].trim();
+
+      // Find callout in the rest of the line
+      const callout = findCalloutInText(rest, calloutLookup);
+      if (callout) {
+        const role = guessRoleFromContext(rest);
+        players.push({
+          position: callout,
+          role,
+          team: side,
+        });
+
+        // Also try to detect movement arrow from "va vers X" / "advances to X"
+        const moveTo = findMovementTarget(rest, calloutLookup);
+        if (moveTo && moveTo !== callout) {
+          arrows.push({
+            from: callout,
+            to: moveTo,
+            type: "movement",
+          });
+        }
+      }
+    }
+  }
+
+  // ---- Utility detection (full-text scan) ----
+  // French: "smoke sur [callout]", "flash par-dessus [callout]", "molotov dans [callout]"
+  //   "lance un(e) smoke/flash/molotov/he sur/vers/dans/à [callout]"
+  //   "smoke ... depuis [callout] sur [callout]"
+  // English: "smoke on [callout]", "flash over [callout]", "molotov in [callout]"
+  //   "throw a smoke/flash/molotov/he to/towards/at [callout]"
+  const utilityPatterns: Array<{
+    type: string;
+    pattern: RegExp;
+    captureGroup: number;
+  }> = [
+    // "smoke sur/vers/dans/à [callout]" or "smoke on/to/in/at [callout]"
+    {
+      type: "smoke",
+      pattern:
+        /\b(?:smoke|smokes?)\s+(?:sur|vers|dans|à|pour|on|to|in|at|towards?|for)\s+(?:le\s+|la\s+|les?\s+)?([^\s,;.!?()]+)/gi,
+      captureGroup: 1,
+    },
+    // "flash sur/par-dessus/vers [callout]" or "flash over/to/towards [callout]"
+    {
+      type: "flash",
+      pattern:
+        /\b(?:flash|flashes?)\s+(?:sur|par[- ]dessus|vers|dans|à|pour|on|over|to|in|at|towards?|for)\s+(?:le\s+|la\s+|les?\s+)?([^\s,;.!?()]+)/gi,
+      captureGroup: 1,
+    },
+    // "molotov dans/sur/vers [callout]" or "molotov in/on/to [callout]"
+    {
+      type: "molotov",
+      pattern:
+        /\b(?:molotov|molly|mollies?)\s+(?:dans|sur|vers|à|pour|in|on|to|at|towards?|for)\s+(?:le\s+|la\s+|les?\s+)?([^\s,;.!?()]+)/gi,
+      captureGroup: 1,
+    },
+    // "he grenade / grenade explosive" (less common but handle it)
+    {
+      type: "he",
+      pattern:
+        /\b(?:he(?:\s+grenade)?|grenade\s+explosive)\s+(?:sur|vers|dans|à|pour|on|to|in|at|towards?|for)\s+(?:le\s+|la\s+|les?\s+)?([^\s,;.!?()]+)/gi,
+      captureGroup: 1,
+    },
+  ];
+
+  for (const up of utilityPatterns) {
+    let uMatch;
+    while ((uMatch = up.pattern.exec(lowerResp)) !== null) {
+      const rawTarget = uMatch[up.captureGroup].trim();
+      const target = matchCallout(rawTarget, calloutLookup);
+      if (target) {
+        // Try to find a "from" position in the surrounding 80 chars before the match
+        const before = lowerResp.slice(Math.max(0, uMatch.index - 80), uMatch.index);
+        const from = findCalloutInText(before, calloutLookup) || "T Spawn";
+
+        utility.push({
+          type: up.type,
+          from,
+          to: target,
+          description: `${up.type} on ${target}`,
+        });
+
+        // Add a utility arrow
+        arrows.push({
+          from,
+          to: target,
+          type: "utility",
+        });
+      }
+    }
+  }
+
+  // ---- Additional arrow detection from movement verbs ----
+  // "avance vers X" / "push X" / "rush X" / "rotate vers X" / "go to X" / "move to X"
+  const movementPatterns = [
+    /\b(?:avance|push|rush|rotate|rotatio[nN]?|go|move|walk|cour[st]?|descend|remonte)\s+(?:vers|to|through|dans|par|through)\s+([^\s,;.!?()]+)/gi,
+    /\b(?:depuis|from)\s+([^\s,;.!?()]+)\s+(?:vers|to|jusqu|until)\s+([^\s,;.!?()]+)/gi,
+  ];
+
+  for (const mp of movementPatterns) {
+    let mMatch;
+    while ((mMatch = mp.exec(lowerResp)) !== null) {
+      if (mp === movementPatterns[1] && mMatch.length >= 3) {
+        // "depuis X vers Y" pattern: two callouts
+        const from = matchCallout(mMatch[1], calloutLookup);
+        const to = matchCallout(mMatch[2], calloutLookup);
+        if (from && to && from !== to) {
+          // Avoid duplicates
+          if (!arrows.some((a) => a.from === from && a.to === to)) {
+            arrows.push({ from, to, type: "movement" });
+          }
+        }
+      } else {
+        const target = matchCallout(mMatch[1], calloutLookup);
+        if (target) {
+          // No "from" detected — these are just destinations
+          // Only add if we have a player near that could be the source
+        }
+      }
+    }
+  }
+
+  // ---- Deduplicate players by position ----
+  const seenPositions = new Set<string>();
+  const uniquePlayers = players.filter((p) => {
+    const key = p.position.toLowerCase();
+    if (seenPositions.has(key)) return false;
+    seenPositions.add(key);
+    return true;
+  });
+
+  // If we couldn't extract players, return null and let getDefaultTactical handle it
+  if (uniquePlayers.length === 0) return null;
+
+  // Determine strategy name from text
+  const strategy = guessStrategyName(response, side);
+
+  return {
+    map: mapName.toLowerCase(),
+    side,
+    strategy,
+    players: uniquePlayers,
+    utility: dedupUtility(utility),
+    arrows: dedupArrows(arrows),
+  };
+}
+
+/**
+ * Generate a default tactical layout for a map when text extraction also fails.
+ * Places 5 T-side players at common starting positions.
+ * Ensures a map is ALWAYS generated when a map name is mentioned.
+ */
+export function getDefaultTactical(
+  mapName: string,
+  response: string
+): TacticalData | null {
+  const data = loadMapData(mapName);
+  if (!data || data.callouts.length === 0) return null;
+
+  // Detect side
+  const lowerResp = response.toLowerCase();
+  const isCT =
+    /\b(ct\s*side|counter|counter-terrorist|retake|défense|défendre)\b/i.test(
+      lowerResp
+    );
+  const side: "CT" | "T" = isCT ? "CT" : "T";
+
+  // Determine which callouts to use based on side
+  const callouts = data.callouts.map((c) => c.name);
+  const spawns = Object.keys(data.spawns);
+
+  // Pick 5 spread-out positions for a default layout
+  // For T side: use positions near T Spawn, mid, and split paths
+  // For CT side: use positions near CT Spawn and sites
+  const selectedPositions = selectDefaultPositions(callouts, mapName, side);
+
+  const players: TacticalData["players"] = selectedPositions.map(
+    (pos, i) => ({
+      position: pos,
+      role:
+        i === 0
+          ? "entry"
+          : i === 1
+            ? "support"
+            : i === 2
+              ? "awp"
+              : i === 3
+                ? "igl"
+                : "lurk",
+      team: side,
+    })
+  );
+
+  // Add simple arrows from spawn to first positions
+  const spawnName = side === "CT" ? "CT Spawn" : "T Spawn";
+  const spawnCallout = callouts.find((c) => c.toLowerCase() === spawnName.toLowerCase());
+  const arrows: TacticalData["arrows"] = [];
+
+  if (spawnCallout) {
+    // Add arrows from spawn to each player position (max 3 to avoid clutter)
+    for (let i = 0; i < Math.min(players.length, 3); i++) {
+      if (players[i].position.toLowerCase() !== spawnCallout.toLowerCase()) {
+        arrows.push({
+          from: spawnCallout,
+          to: players[i].position,
+          type: "movement",
+        });
+      }
+    }
+  }
+
+  const strategy = guessStrategyName(response, side);
+
+  return {
+    map: mapName.toLowerCase(),
+    side,
+    strategy: strategy || `Default ${side} Setup`,
+    players,
+    utility: [],
+    arrows,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Helper functions for text extraction
+// ---------------------------------------------------------------------------
+
+/**
+ * Find the first known callout name in a text fragment.
+ * Matches case-insensitively against the canonical callout names.
+ */
+function findCalloutInText(
+  text: string,
+  calloutLookup: Map<string, string>
+): string | null {
+  const lower = text.toLowerCase();
+
+  // Find the earliest callout match in the text (by position, not by name length).
+  // This ensures "va vers A Main, ... smoke sur CT Lane" picks "A Main" first.
+  // When two callouts start at the same position, prefer the longer one.
+  let bestMatch: string | null = null;
+  let bestIndex = Infinity;
+  let bestLength = 0;
+
+  Array.from(calloutLookup.entries()).forEach(([key, value]) => {
+    const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+");
+    const regex = new RegExp(`\\b${escaped}\\b`, "i");
+    const m = lower.match(regex);
+    if (m && m.index !== undefined) {
+      if (m.index < bestIndex || (m.index === bestIndex && key.length > bestLength)) {
+        bestIndex = m.index;
+        bestLength = key.length;
+        bestMatch = value;
+      }
+    }
+  });
+
+  return bestMatch;
+}
+
+/**
+ * Try to match a single word/phrase against known callouts.
+ * Handles case differences and partial matches.
+ */
+function matchCallout(
+  text: string,
+  calloutLookup: Map<string, string>
+): string | null {
+  const lower = text.toLowerCase().trim();
+
+  // Direct match
+  if (calloutLookup.has(lower)) {
+    return calloutLookup.get(lower)!;
+  }
+
+  // Try removing common French articles
+  const withoutArticle = lower.replace(/^(le|la|les?|un|une|des?)\s+/i, "");
+  if (calloutLookup.has(withoutArticle)) {
+    return calloutLookup.get(withoutArticle)!;
+  }
+
+  // Fuzzy: check if any callout starts with the text or vice versa
+  let returnStr: string | null = null;
+  Array.from(calloutLookup.entries()).forEach(([key, value]) => {
+    if (key.startsWith(lower) || lower.startsWith(key)) {
+      returnStr = value;
+    }
+  });
+  return returnStr;
+}
+
+/**
+ * Find a movement target from text like "va vers Cave" / "goes to Long".
+ */
+function findMovementTarget(
+  text: string,
+  calloutLookup: Map<string, string>
+): string | null {
+  const movementPattern =
+    /\b(?:va\s+(?:vers|à|dans|en)|go(?:es)?\s+(?:to|through|into)|advances?\s+(?:to|towards)|push(?:es)?\s+(?:to|through)?|rushing?)\s+([^\s,;.!?()]+)/gi;
+
+  let m;
+  while ((m = movementPattern.exec(text)) !== null) {
+    const target = matchCallout(m[1], calloutLookup);
+    if (target) return target;
+  }
+
+  return null;
+}
+
+/**
+ * Guess player role from the context of their position description.
+ */
+function guessRoleFromContext(text: string): string {
+  const lower = text.toLowerCase();
+  if (
+    /entry|fragger|premier|first|rush/i.test(lower) ||
+    /entrée|premier/i.test(lower)
+  )
+    return "entry";
+  if (
+    /support|anchor|supporter|couverture/i.test(lower)
+  )
+    return "support";
+  if (/awp|sniper|snipe|scope/i.test(lower)) return "awp";
+  if (/igl|caller|lead|leader|capitaine/i.test(lower)) return "igl";
+  if (
+    /lurk|flank|flankeur|rotate|rotation|latéral/i.test(lower)
+  )
+    return "lurk";
+  return "support";
+}
+
+/**
+ * Guess strategy name from the response text.
+ */
+function guessStrategyName(response: string, side: "CT" | "T"): string {
+  const lower = response.toLowerCase();
+
+  // Check for common strategy keywords
+  if (/default/i.test(lower) && /execute/i.test(lower))
+    return "Default Execute";
+  if (/rush/i.test(lower)) return "Rush";
+  if (/slow\s*push|methodical/i.test(lower)) return "Slow Push";
+  if (/split/i.test(lower)) return "Split Push";
+  if (/execute/i.test(lower)) return "Execute";
+  if (/retake/i.test(lower)) return "Retake";
+  if (/stack|anchor|hold/i.test(lower)) return "Site Hold";
+  if (/push/i.test(lower)) return "Push";
+  if (/rotate|rotation/i.test(lower)) return "Rotation";
+  if (/fast/i.test(lower)) return "Fast Play";
+
+  // Check for specific site mentions
+  if (/site\s*a|a\s*rush|push\s*a|execute\s*a/i.test(lower))
+    return "A Execute";
+  if (/site\s*b|b\s*rush|push\s*b|execute\s*b/i.test(lower))
+    return "B Execute";
+  if (/mid/i.test(lower)) return "Mid Control";
+
+  return `${side} Strategy`;
+}
+
+/**
+ * Select default positions for a 5-player setup on a given map.
+ * Uses map-specific knowledge for common default positions.
+ */
+function selectDefaultPositions(
+  callouts: string[],
+  mapName: string,
+  side: "CT" | "T"
+): string[] {
+  // Map-specific default positions
+  const mapDefaults: Record<string, Record<string, string[]>> = {
+    ancient: {
+      T: ["A Main", "Mid", "Tunnel", "Stairs", "Split"],
+      CT: ["A Site", "B Site", "Connector", "CT Spawn", "Cave"],
+    },
+    dust2: {
+      T: ["T Spawn", "Upper Tunnel", "Long Doors", "Catwalk", "Mid Doors"],
+      CT: ["A Site", "B Site", "CT Mid", "CT Spawn", "B Tunnels"],
+    },
+    mirage: {
+      T: ["T Spawn", "A Ramp", "B Apartments", "Mid", "Palace"],
+      CT: ["A Site", "B Site", "CT Spawn", "Jungle", "Market"],
+    },
+    inferno: {
+      T: ["T Spawn", "Banana", "Mid", "Apartments", "T Apartments"],
+      CT: ["A Site", "B Site", "CT Spawn", "Library", "Construction"],
+    },
+    anubis: {
+      T: ["T Spawn", "A Main", "B Main", "Mid", "Canal"],
+      CT: ["A Site", "B Site", "CT Spawn", "Connector", "Palace"],
+    },
+    nuke: {
+      T: ["T Spawn", "Lobby", "Secret", "Yard", "Vent"],
+      CT: ["A Site", "B Site", "CT Spawn", "Ramp", "Heaven"],
+    },
+    overpass: {
+      T: ["T Spawn", "A Long", "B Short", "Mid", "Playground"],
+      CT: ["A Site", "B Site", "CT Spawn", "Connector", "Water"],
+    },
+    vertigo: {
+      T: ["T Spawn", "A Ramp", "B Ramp", "Mid", "Stairs"],
+      CT: ["A Site", "B Site", "CT Spawn", "Mid", "Pillar"],
+    },
+  };
+
+  const defaults = mapDefaults[mapName]?.[side];
+  if (defaults) {
+    // Filter to only include callouts that actually exist in the map data
+    const calloutSet = new Set(callouts.map((c) => c.toLowerCase()));
+    const valid = defaults.filter((d) => calloutSet.has(d.toLowerCase()));
+    if (valid.length >= 3) {
+      // Pad to 5 if needed using T Spawn / CT Spawn
+      while (valid.length < 5 && valid.length < callouts.length) {
+        const next = callouts.find(
+          (c) => !valid.some((v) => v.toLowerCase() === c.toLowerCase())
+        );
+        if (next) valid.push(next);
+        else break;
+      }
+      return valid.slice(0, 5);
+    }
+  }
+
+  // Generic fallback: pick first 5 callouts that aren't spawns
+  const nonSpawn = callouts.filter(
+    (c) =>
+      !c.toLowerCase().includes("spawn") &&
+      c.toLowerCase() !== "mid"
+  );
+  const spawn = callouts.find((c) =>
+    c.toLowerCase().includes(side === "T" ? "t spawn" : "ct spawn")
+  );
+
+  const result: string[] = [];
+  if (spawn) result.push(spawn);
+  for (const c of nonSpawn) {
+    if (result.length >= 5) break;
+    if (!result.some((r) => r.toLowerCase() === c.toLowerCase())) {
+      result.push(c);
+    }
+  }
+
+  return result.slice(0, 5);
+}
+
+/**
+ * Deduplicate utility entries.
+ */
+function dedupUtility(
+  utility: TacticalData["utility"]
+): TacticalData["utility"] {
+  const seen = new Set<string>();
+  return utility.filter((u) => {
+    const key = `${u.type}:${u.from}:${u.to}`.toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+/**
+ * Deduplicate arrow entries.
+ */
+function dedupArrows(
+  arrows: TacticalData["arrows"]
+): TacticalData["arrows"] {
+  const seen = new Set<string>();
+  return arrows.filter((a) => {
+    const key = `${a.from}:${a.to}:${a.type}`.toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+/**
  * Instructions appended to the system prompt when a map is detected.
  * Tells the LLM how to format tactical output.
  */

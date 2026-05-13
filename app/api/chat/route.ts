@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { buildRAGPrompt, streamChat, type ChatMessage } from "@/lib/llm";
 import { getDb } from "@/lib/db";
-import { parseTacticalJSON, toRendererOptions, type TacticalData } from "@/lib/map-detection";
+import {
+  detectMapMention,
+  parseTacticalJSON,
+  extractTacticalFromText,
+  getDefaultTactical,
+  toRendererOptions,
+  type TacticalData,
+} from "@/lib/map-detection";
 import fs from "fs";
 import path from "path";
 
@@ -165,6 +172,9 @@ export async function POST(request: NextRequest) {
     const question = lastMessage.content;
     const { context, sources } = searchRelevantDocs(question, 8);
 
+    // Detect map mention BEFORE streaming so we can use it for fallback extraction
+    const detectedMap = detectMapMention(question);
+
     const systemMessage: ChatMessage = {
       role: "system",
       content: buildRAGPrompt(context || "No specific documents found, answer from general CS2 knowledge.", question),
@@ -190,7 +200,24 @@ export async function POST(request: NextRequest) {
             // After streaming completes, check for tactical JSON and generate map
             let mapImage: { url: string; map: string } | undefined;
             try {
-              const tactical = parseTacticalJSON(fullResponse);
+              let tactical = parseTacticalJSON(fullResponse);
+
+              // FALLBACK 1: If LLM didn't include tactical JSON, try extracting from text
+              if (!tactical && detectedMap) {
+                console.log(`[chat] No tactical JSON found, trying text extraction for map: ${detectedMap}`);
+                const extracted = extractTacticalFromText(fullResponse, detectedMap);
+                if (extracted) {
+                  console.log(`[chat] Text extraction succeeded: ${extracted.players.length} players, ${extracted.utility.length} utility, ${extracted.arrows.length} arrows`);
+                  tactical = extracted;
+                }
+              }
+
+              // FALLBACK 2: If text extraction also failed, use deterministic defaults
+              if (!tactical && detectedMap) {
+                console.log(`[chat] Text extraction failed, using default tactical for map: ${detectedMap}`);
+                tactical = getDefaultTactical(detectedMap, fullResponse);
+              }
+
               if (tactical) {
                 const result = await generateTacticalMap(tactical);
                 if (result) {

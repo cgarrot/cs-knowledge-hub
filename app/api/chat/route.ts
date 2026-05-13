@@ -188,89 +188,80 @@ export async function POST(request: NextRequest) {
     const encoder = new TextEncoder();
     let closed = false;
 
-    // Start map generation IN PARALLEL as soon as we know the map
-    // Send mapImage event mid-stream as soon as SVG is ready
-    let mapGenerationPromise: Promise<{ url: string; map: string } | null> | null = null;
     let mapSent = false;
-    if (detectedMap) {
-      console.log(`[chat] Map detected: ${detectedMap}, starting parallel map generation`);
-      mapGenerationPromise = generateTacticalMap(
-        getDefaultTactical(detectedMap, question) || {
-          map: detectedMap,
-          side: "T",
-          strategy: "Default positions",
-          players: [],
-          utility: [],
-          arrows: [],
-        }
-      ).catch((err) => {
-        console.warn("[chat] Parallel map generation failed:", err);
-        return null;
-      });
-    }
 
     const stream = new ReadableStream({
       async start(controller) {
         try {
+          // STEP 1: Send the default map IMMEDIATELY before LLM even starts
+          // This guarantees the user always sees a tactical map for any map question
+          let earlyMapImage: { url: string; map: string } | null = null;
+          if (detectedMap) {
+            try {
+              const defaultTactical = getDefaultTactical(detectedMap, question) || {
+                map: detectedMap,
+                side: "T" as const,
+                strategy: "Default positions",
+                players: [],
+                utility: [],
+                arrows: [],
+              };
+              earlyMapImage = await generateTacticalMap(defaultTactical);
+              if (earlyMapImage) {
+                console.log(`[chat] Sending default map image immediately for ${detectedMap}`);
+                const mapData = JSON.stringify({ mapImage: earlyMapImage });
+                controller.enqueue(encoder.encode(`data: ${mapData}\n\n`));
+                mapSent = true;
+              }
+            } catch (err) {
+              console.warn("[chat] Failed to generate default map:", err);
+            }
+          }
+
+          // STEP 2: Stream LLM response
           for await (const chunk of streamChat(llmMessages)) {
             if (closed) return;
             fullResponse += chunk;
             const data = JSON.stringify({ content: chunk });
             controller.enqueue(encoder.encode(`data: ${data}\n\n`));
-
-            // Check if parallel map generation finished — send mapImage during stream
-            if (mapGenerationPromise && !mapSent) {
-              // Quick check without blocking (Promise.race with immediate resolve)
-              const quickResult = await Promise.race([
-                mapGenerationPromise.then(r => r),
-                Promise.resolve(null as { url: string; map: string } | null)
-              ]);
-              if (quickResult) {
-                mapSent = true;
-                console.log("[chat] Sending parallel map image mid-stream");
-                const mapData = JSON.stringify({ mapImage: quickResult });
-                controller.enqueue(encoder.encode(`data: ${mapData}\n\n`));
-              }
-            }
           }
+
           if (!closed) {
-            // After streaming completes, try to get a BETTER map from the full response
-            let betterMapImage: { url: string; map: string } | undefined;
+            // STEP 3: After streaming, try to generate a BETTER map from the LLM response
+            // Only send if we didn't already send one, or if we want to upgrade
+            let finalMapImage: { url: string; map: string } | undefined = earlyMapImage || undefined;
             try {
               let tactical = parseTacticalJSON(fullResponse);
 
-              // FALLBACK 1: If LLM didn't include tactical JSON, try extracting from text
+              // FALLBACK 1: Extract from free text
               if (!tactical && detectedMap) {
                 console.log(`[chat] No tactical JSON found, trying text extraction for map: ${detectedMap}`);
                 const extracted = extractTacticalFromText(fullResponse, detectedMap);
                 if (extracted) {
-                  console.log(`[chat] Text extraction succeeded: ${extracted.players.length} players, ${extracted.utility.length} utility, ${extracted.arrows.length} arrows`);
+                  console.log(`[chat] Text extraction succeeded: ${extracted.players.length} players`);
                   tactical = extracted;
                 }
               }
 
-              // FALLBACK 2: If text extraction also failed, use deterministic defaults
+              // FALLBACK 2: Deterministic defaults
               if (!tactical && detectedMap) {
-                console.log(`[chat] Text extraction failed, using default tactical for map: ${detectedMap}`);
                 tactical = getDefaultTactical(detectedMap, fullResponse);
               }
 
               if (tactical) {
                 const result = await generateTacticalMap(tactical);
                 if (result) {
-                  betterMapImage = result;
+                  finalMapImage = result;
+                  // Send upgraded map if it's different from early one
+                  if (!mapSent) {
+                    const mapData = JSON.stringify({ mapImage: result });
+                    controller.enqueue(encoder.encode(`data: ${mapData}\n\n`));
+                    mapSent = true;
+                  }
                 }
               }
             } catch (mapError) {
               console.warn("[chat] Failed to generate tactical map from stream response:", mapError);
-            }
-
-            // If we got a better map from the full response AND didn't send one early, send it now
-            // If we already sent the early map, skip (don't send duplicate)
-            if (betterMapImage && !mapSent) {
-              const mapData = JSON.stringify({ mapImage: betterMapImage });
-              controller.enqueue(encoder.encode(`data: ${mapData}\n\n`));
-              mapSent = true;
             }
 
             controller.enqueue(encoder.encode("data: [DONE]\n\n"));
@@ -278,7 +269,7 @@ export async function POST(request: NextRequest) {
             closed = true;
 
             // Save to DB
-            saveChatHistory(chatId, question, fullResponse, sources, betterMapImage);
+            saveChatHistory(chatId, question, fullResponse, sources, finalMapImage);
           }
         } catch (error) {
           console.error("[chat] Stream error:", error);

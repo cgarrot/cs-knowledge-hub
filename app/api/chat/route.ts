@@ -172,8 +172,19 @@ export async function POST(request: NextRequest) {
     const question = lastMessage.content;
     const { context, sources } = searchRelevantDocs(question, 8);
 
-    // Detect map mention BEFORE streaming so we can use it for fallback extraction
-    const detectedMap = detectMapMention(question);
+    // Detect map mention in the current message OR in conversation history
+    // This handles follow-up messages like "fait le moi sur la map" after discussing dust2
+    let detectedMap = detectMapMention(question);
+    if (!detectedMap) {
+      // Scan previous messages for map mentions (most recent first)
+      for (let i = messages.length - 1; i >= 0; i--) {
+        const prevMap = detectMapMention(messages[i].content);
+        if (prevMap) {
+          detectedMap = prevMap;
+          break;
+        }
+      }
+    }
 
     const systemMessage: ChatMessage = {
       role: "system",
@@ -188,37 +199,10 @@ export async function POST(request: NextRequest) {
     const encoder = new TextEncoder();
     let closed = false;
 
-    let mapSent = false;
-
     const stream = new ReadableStream({
       async start(controller) {
         try {
-          // STEP 1: Send the default map IMMEDIATELY before LLM even starts
-          // This guarantees the user always sees a tactical map for any map question
-          let earlyMapImage: { url: string; map: string } | null = null;
-          if (detectedMap) {
-            try {
-              const defaultTactical = getDefaultTactical(detectedMap, question) || {
-                map: detectedMap,
-                side: "T" as const,
-                strategy: "Default positions",
-                players: [],
-                utility: [],
-                arrows: [],
-              };
-              earlyMapImage = await generateTacticalMap(defaultTactical);
-              if (earlyMapImage) {
-                console.log(`[chat] Sending default map image immediately for ${detectedMap}`);
-                const mapData = JSON.stringify({ mapImage: earlyMapImage });
-                controller.enqueue(encoder.encode(`data: ${mapData}\n\n`));
-                mapSent = true;
-              }
-            } catch (err) {
-              console.warn("[chat] Failed to generate default map:", err);
-            }
-          }
-
-          // STEP 2: Stream LLM response
+          // Stream LLM response — NO early default map, we wait for the real data
           for await (const chunk of streamChat(llmMessages)) {
             if (closed) return;
             fullResponse += chunk;
@@ -227,9 +211,8 @@ export async function POST(request: NextRequest) {
           }
 
           if (!closed) {
-            // STEP 3: After streaming, try to generate a BETTER map from the LLM response
-            // Only send if we didn't already send one, or if we want to upgrade
-            let finalMapImage: { url: string; map: string } | undefined = earlyMapImage || undefined;
+            // After streaming, extract tactical data from the LLM response and generate map
+            let finalMapImage: { url: string; map: string } | undefined;
             try {
               let tactical = parseTacticalJSON(fullResponse);
 
@@ -252,12 +235,9 @@ export async function POST(request: NextRequest) {
                 const result = await generateTacticalMap(tactical);
                 if (result) {
                   finalMapImage = result;
-                  // Send upgraded map if it's different from early one
-                  if (!mapSent) {
-                    const mapData = JSON.stringify({ mapImage: result });
-                    controller.enqueue(encoder.encode(`data: ${mapData}\n\n`));
-                    mapSent = true;
-                  }
+                  console.log(`[chat] Sending tactical map for ${tactical.map}: ${tactical.players?.length || 0} players, ${tactical.utility?.length || 0} utility`);
+                  const mapData = JSON.stringify({ mapImage: result });
+                  controller.enqueue(encoder.encode(`data: ${mapData}\n\n`));
                 }
               }
             } catch (mapError) {

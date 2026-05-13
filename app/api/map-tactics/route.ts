@@ -240,7 +240,7 @@ export async function POST(request: NextRequest) {
     const filePath = path.join(OUTPUT_DIR, filename);
     fs.writeFileSync(filePath, svg, "utf-8");
 
-    const svgUrl = `/generated-maps/${filename}`;
+    const svgUrl = `/api/generated-maps/${filename}`;
 
     return NextResponse.json({
       success: true,

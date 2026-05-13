@@ -357,7 +357,7 @@ async function generateTacticalMap(
     const filePath = path.join(outputDir, filename);
     fs.writeFileSync(filePath, svg, "utf-8");
 
-    return { url: `/generated-maps/${filename}`, map: tactical.map };
+    return { url: `/api/generated-maps/${filename}`, map: tactical.map };
   } catch (error) {
     console.error("[chat] Error generating tactical map:", error);
     return null;

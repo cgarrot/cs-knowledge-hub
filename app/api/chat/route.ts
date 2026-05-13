@@ -189,8 +189,9 @@ export async function POST(request: NextRequest) {
     let closed = false;
 
     // Start map generation IN PARALLEL as soon as we know the map
-    // This avoids depending on the LLM stream completing successfully
+    // Send mapImage event mid-stream as soon as SVG is ready
     let mapGenerationPromise: Promise<{ url: string; map: string } | null> | null = null;
+    let mapSent = false;
     if (detectedMap) {
       console.log(`[chat] Map detected: ${detectedMap}, starting parallel map generation`);
       mapGenerationPromise = generateTacticalMap(
@@ -210,6 +211,22 @@ export async function POST(request: NextRequest) {
 
     const stream = new ReadableStream({
       async start(controller) {
+        // Send map image early in a separate async loop
+        const mapSender = (async () => {
+          if (!mapGenerationPromise) return;
+          try {
+            const result = await mapGenerationPromise;
+            if (result && !closed && !mapSent) {
+              mapSent = true;
+              console.log("[chat] Sending parallel map image early");
+              const mapData = JSON.stringify({ mapImage: result });
+              controller.enqueue(encoder.encode(`data: ${mapData}\n\n`));
+            }
+          } catch (e) {
+            console.warn("[chat] Parallel map send failed:", e);
+          }
+        })();
+
         try {
           for await (const chunk of streamChat(llmMessages)) {
             if (closed) return;
@@ -218,8 +235,8 @@ export async function POST(request: NextRequest) {
             controller.enqueue(encoder.encode(`data: ${data}\n\n`));
           }
           if (!closed) {
-            // After streaming completes, check for tactical JSON and generate map
-            let mapImage: { url: string; map: string } | undefined;
+            // After streaming completes, try to get a BETTER map from the full response
+            let betterMapImage: { url: string; map: string } | undefined;
             try {
               let tactical = parseTacticalJSON(fullResponse);
 
@@ -242,30 +259,19 @@ export async function POST(request: NextRequest) {
               if (tactical) {
                 const result = await generateTacticalMap(tactical);
                 if (result) {
-                  mapImage = result;
+                  betterMapImage = result;
                 }
               }
             } catch (mapError) {
               console.warn("[chat] Failed to generate tactical map from stream response:", mapError);
             }
 
-            // If stream-based generation failed, use the parallel pre-generated map
-            if (!mapImage && mapGenerationPromise) {
-              try {
-                const parallelResult = await mapGenerationPromise;
-                if (parallelResult) {
-                  console.log("[chat] Using parallel pre-generated map as fallback");
-                  mapImage = parallelResult;
-                }
-              } catch (e) {
-                console.warn("[chat] Parallel map fallback also failed:", e);
-              }
-            }
-
-            // Send map image info as a special SSE event if generated
-            if (mapImage) {
-              const mapData = JSON.stringify({ mapImage });
+            // If we got a better map from the full response AND didn't send one early, send it now
+            // If we already sent the early map, skip (don't send duplicate)
+            if (betterMapImage && !mapSent) {
+              const mapData = JSON.stringify({ mapImage: betterMapImage });
               controller.enqueue(encoder.encode(`data: ${mapData}\n\n`));
+              mapSent = true;
             }
 
             controller.enqueue(encoder.encode("data: [DONE]\n\n"));
@@ -273,7 +279,7 @@ export async function POST(request: NextRequest) {
             closed = true;
 
             // Save to DB
-            saveChatHistory(chatId, question, fullResponse, sources, mapImage);
+            saveChatHistory(chatId, question, fullResponse, sources, betterMapImage);
           }
         } catch (error) {
           console.error("[chat] Stream error:", error);

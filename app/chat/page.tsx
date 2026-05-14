@@ -279,7 +279,9 @@ function ChatContent() {
                 assistantContent += parsed.content;
                 setMessages((prev) => {
                   const updated = [...prev];
+                  const last = updated[updated.length - 1];
                   updated[updated.length - 1] = {
+                    ...last,
                     role: "assistant",
                     content: assistantContent,
                   };

@@ -45,7 +45,7 @@ const UTILITY_TYPE_MAP: Record<string, string> = {
 };
 
 const MIN_ZOOM = 1;
-const MAX_ZOOM = 3;
+const MAX_ZOOM = 4;
 const ZOOM_STEP = 0.25;
 
 /* -------------------------------------------------------------------------- */
@@ -60,14 +60,12 @@ function annotateSvg(svgEl: SVGSVGElement) {
     const fill = el.getAttribute("fill") || "";
     const stroke = el.getAttribute("stroke");
 
-    // Main player circle: r=14, has white stroke
     if (r === "14" && stroke === "white") {
       const team = fill === "#EF5350" ? "T" : "CT";
       el.setAttribute("data-tm-type", "player");
       el.setAttribute("data-tm-team", team);
       el.classList.add("tm-player");
 
-      // Mark shadow circle (previous sibling)
       const prev = el.previousElementSibling;
       if (prev && prev.tagName === "circle") {
         const prevFill = prev.getAttribute("fill") || "";
@@ -77,7 +75,6 @@ function annotateSvg(svgEl: SVGSVGElement) {
         }
       }
 
-      // Extract role from next text sibling
       const next = el.nextElementSibling;
       if (next && next.tagName === "text") {
         const letter = (next.textContent || "").trim();
@@ -85,8 +82,6 @@ function annotateSvg(svgEl: SVGSVGElement) {
         el.setAttribute("data-tm-role", role);
         next.setAttribute("data-tm-type", "player");
         next.classList.add("tm-player");
-
-        // Build tooltip text
         const tooltipText = `${team} ${role}`;
         el.setAttribute("data-tm-tooltip", tooltipText);
       }
@@ -101,7 +96,6 @@ function annotateSvg(svgEl: SVGSVGElement) {
       el.setAttribute("data-tm-type", "utility");
       el.classList.add("tm-utility");
 
-      // Type letter from next text sibling
       const typeText = el.nextElementSibling;
       if (typeText && typeText.tagName === "text") {
         const letter = (typeText.textContent || "").trim();
@@ -110,7 +104,6 @@ function annotateSvg(svgEl: SVGSVGElement) {
         typeText.setAttribute("data-tm-type", "utility");
         typeText.classList.add("tm-utility");
 
-        // Label text from the text after that
         const labelText = typeText.nextElementSibling;
         if (labelText && labelText.tagName === "text") {
           const label = (labelText.textContent || "").trim();
@@ -135,13 +128,11 @@ function annotateSvg(svgEl: SVGSVGElement) {
       el.setAttribute("data-tm-utility-type", "Flash");
       el.classList.add("tm-utility");
 
-      // Type letter text
       const typeText = el.nextElementSibling;
       if (typeText && typeText.tagName === "text") {
         typeText.setAttribute("data-tm-type", "utility");
         typeText.classList.add("tm-utility");
       }
-      // Label text
       const labelText = typeText?.nextElementSibling;
       if (labelText && labelText.tagName === "text") {
         const label = (labelText.textContent || "").trim();
@@ -164,7 +155,6 @@ function annotateSvg(svgEl: SVGSVGElement) {
       const arrowKind = markerEnd.includes("Push") ? "Push" : "Throw";
       el.setAttribute("data-tm-tooltip", `${arrowKind} arrow`);
     } else {
-      // Thin utility trajectory lines (dashed, no marker-end)
       const dash = el.getAttribute("stroke-dasharray");
       if (dash) {
         el.setAttribute("data-tm-type", "utility");
@@ -181,7 +171,6 @@ function annotateSvg(svgEl: SVGSVGElement) {
       el.setAttribute("data-tm-type", "zone");
       el.classList.add("tm-zone");
 
-      // Callout name from next text sibling
       const nextText = el.nextElementSibling;
       if (nextText && nextText.tagName === "text") {
         const callout = (nextText.textContent || "").trim();
@@ -239,151 +228,6 @@ function applyLayerVisibility(
 }
 
 /* -------------------------------------------------------------------------- */
-/*  Styles                                                                    */
-/* -------------------------------------------------------------------------- */
-
-const STYLES = {
-  wrapper: {
-    position: "relative" as const,
-    background: "#1a1a2e",
-    borderRadius: "12px",
-    border: "1px solid rgba(255,255,255,0.1)",
-    overflow: "hidden",
-    marginTop: "8px",
-    fontFamily: "sans-serif",
-    width: "100%",
-  },
-  wrapperFullscreen: {
-    position: "fixed" as const,
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 9999,
-    borderRadius: 0,
-    border: "none",
-    margin: 0,
-  },
-  wrapperMinimized: {
-    height: "48px",
-  },
-  toolbar: {
-    display: "flex",
-    alignItems: "center",
-    gap: "4px",
-    padding: "6px 10px",
-    background: "rgba(0,0,0,0.5)",
-    borderBottom: "1px solid rgba(255,255,255,0.08)",
-    flexWrap: "wrap" as const,
-  },
-  toolbarBtn: {
-    background: "rgba(255,255,255,0.08)",
-    border: "1px solid rgba(255,255,255,0.12)",
-    borderRadius: "6px",
-    color: "#ccc",
-    cursor: "pointer",
-    fontSize: "12px",
-    padding: "4px 8px",
-    lineHeight: "18px",
-    transition: "all 0.15s ease",
-    userSelect: "none" as const,
-    touchAction: "manipulation",
-  },
-  toolbarBtnActive: {
-    background: "rgba(124,77,255,0.3)",
-    borderColor: "rgba(124,77,255,0.5)",
-    color: "#fff",
-  },
-  toolbarBtnHover: {
-    background: "rgba(255,255,255,0.15)",
-  },
-  separator: {
-    width: "1px",
-    height: "18px",
-    background: "rgba(255,255,255,0.12)",
-    margin: "0 4px",
-  },
-  mapTitle: {
-    color: "#eee",
-    fontSize: "13px",
-    fontWeight: 600,
-    marginRight: "8px",
-    textTransform: "capitalize" as const,
-    whiteSpace: "nowrap" as const,
-  },
-  spacer: {
-    flex: 1,
-  },
-  svgContainer: {
-    width: "100%",
-    overflow: "hidden",
-    cursor: "grab",
-    position: "relative" as const,
-    background: "#1a1a2e",
-    touchAction: "none",
-    aspectRatio: "1 / 1",
-  },
-  svgContainerFullscreen: {
-    height: "calc(100vh - 42px)",
-    maxHeight: "none",
-  },
-  svgInner: {
-    transformOrigin: "0 0",
-    transition: "transform 0.1s ease-out",
-    width: "100%",
-  },
-  svgInnerDragging: {
-    transition: "none",
-  },
-  tooltip: {
-    position: "absolute" as const,
-    zIndex: 100,
-    background: "rgba(0,0,0,0.88)",
-    color: "#fff",
-    fontSize: "12px",
-    padding: "5px 10px",
-    borderRadius: "6px",
-    pointerEvents: "none" as const,
-    whiteSpace: "nowrap" as const,
-    border: "1px solid rgba(255,255,255,0.15)",
-    boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
-    transform: "translate(-50%, -100%)",
-    marginTop: "-8px",
-  },
-  loadingOverlay: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    height: "200px",
-    color: "#888",
-    fontSize: "14px",
-  },
-  errorOverlay: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    height: "200px",
-    color: "#EF5350",
-    fontSize: "14px",
-  },
-  zoomLabel: {
-    color: "#aaa",
-    fontSize: "11px",
-    minWidth: "32px",
-    textAlign: "center" as const,
-  },
-  minimizedContent: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    height: "48px",
-    color: "#aaa",
-    fontSize: "13px",
-    cursor: "pointer",
-  },
-};
-
-/* -------------------------------------------------------------------------- */
 /*  Component                                                                 */
 /* -------------------------------------------------------------------------- */
 
@@ -412,7 +256,12 @@ export default function TacticalMap({ svgUrl, mapName, onClose }: TacticalMapPro
   const panStart = useRef({ x: 0, y: 0 });
   const lastTouchDist = useRef(0);
   const lastTouchCenter = useRef({ x: 0, y: 0 });
-  const panCallback = useRef(setPan);
+  const zoomRef = useRef(1);
+  const panRef = useRef({ x: 0, y: 0 });
+
+  // Keep refs in sync with state for use in callbacks
+  useEffect(() => { zoomRef.current = zoom; }, [zoom]);
+  useEffect(() => { panRef.current = pan; }, [pan]);
 
   /* ── Fetch SVG ─────────────────────────────────────────────────────── */
   useEffect(() => {
@@ -449,10 +298,9 @@ export default function TacticalMap({ svgUrl, mapName, onClose }: TacticalMapPro
     const svgEl = svgRef.current.querySelector("svg");
     if (!svgEl) return;
 
-    // Make SVG responsive
+    // Make SVG fill its container, preserve aspect ratio
     svgEl.setAttribute("width", "100%");
-    svgEl.removeAttribute("height");
-    svgEl.style.maxHeight = "100%";
+    svgEl.setAttribute("height", "100%");
     svgEl.style.display = "block";
 
     annotateSvg(svgEl);
@@ -466,6 +314,97 @@ export default function TacticalMap({ svgUrl, mapName, onClose }: TacticalMapPro
     applyLayerVisibility(svgEl, layers);
   }, [layers, svgContent, isMinimized]);
 
+  /* ── Clamp pan to keep SVG visible ─────────────────────────────────── */
+  const clampPan = useCallback((p: { x: number; y: number }, z: number, containerW: number, containerH: number) => {
+    if (z <= 1) return { x: 0, y: 0 };
+    const scaledW = containerW * z;
+    const scaledH = containerH * z;
+    const maxPanX = (scaledW - containerW) / 2;
+    const maxPanY = (scaledH - containerH) / 2;
+    return {
+      x: Math.max(-maxPanX, Math.min(maxPanX, p.x)),
+      y: Math.max(-maxPanY, Math.min(maxPanY, p.y)),
+    };
+  }, []);
+
+  /* ── Wheel zoom (centered) ─────────────────────────────────────────── */
+  const handleWheel = useCallback(
+    (e: React.WheelEvent) => {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP;
+      const newZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoomRef.current + delta));
+      if (newZoom === zoomRef.current) return;
+
+      const rect = svgRef.current!.getBoundingClientRect();
+      // Mouse position relative to container
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      // Normalize to 0-1
+      const nx = mx / rect.width;
+      const ny = my / rect.height;
+
+      // Adjust pan so zoom centers on mouse position
+      const oldZoom = zoomRef.current;
+      const scaleFactor = newZoom / oldZoom;
+      const newPan = {
+        x: (panRef.current.x - mx * (scaleFactor - 1)) * (newZoom > 1 ? 1 : 0),
+        y: (panRef.current.y - my * (scaleFactor - 1)) * (newZoom > 1 ? 1 : 0),
+      };
+
+      setZoom(newZoom);
+      setPan(newZoom > 1 ? clampPan(newPan, newZoom, rect.width, rect.height) : { x: 0, y: 0 });
+    },
+    [clampPan]
+  );
+
+  /* ── Mouse drag pan ────────────────────────────────────────────────── */
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      if (e.button !== 0) return;
+      if (zoomRef.current <= 1) return;
+      e.preventDefault();
+      isDragging.current = true;
+      dragStart.current = { x: e.clientX, y: e.clientY };
+      panStart.current = { ...panRef.current };
+      if (svgRef.current)
+        svgRef.current.style.cursor = "grabbing";
+    },
+    []
+  );
+
+  const handleGlobalMouseMove = useCallback(
+    (e: MouseEvent) => {
+      if (!isDragging.current) return;
+      const dx = e.clientX - dragStart.current.x;
+      const dy = e.clientY - dragStart.current.y;
+      const rect = svgRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const newPan = {
+        x: panStart.current.x + dx,
+        y: panStart.current.y + dy,
+      };
+      setPan(clampPan(newPan, zoomRef.current, rect.width, rect.height));
+    },
+    [clampPan]
+  );
+
+  const handleGlobalMouseUp = useCallback(() => {
+    if (isDragging.current) {
+      isDragging.current = false;
+      if (svgRef.current)
+        svgRef.current.style.cursor = zoomRef.current > 1 ? "grab" : "default";
+    }
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener("mousemove", handleGlobalMouseMove);
+    window.addEventListener("mouseup", handleGlobalMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", handleGlobalMouseMove);
+      window.removeEventListener("mouseup", handleGlobalMouseUp);
+    };
+  }, [handleGlobalMouseMove, handleGlobalMouseUp]);
+
   /* ── Tooltip via mouseover delegation ──────────────────────────────── */
   const handleMouseMove = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
@@ -473,7 +412,6 @@ export default function TacticalMap({ svgUrl, mapName, onClose }: TacticalMapPro
         setTooltip(null);
         return;
       }
-
       const target = e.target as Element;
       const annotated =
         target.closest("[data-tm-tooltip]") ||
@@ -482,13 +420,11 @@ export default function TacticalMap({ svgUrl, mapName, onClose }: TacticalMapPro
         if (tooltip) setTooltip(null);
         return;
       }
-
       const tipText = annotated.getAttribute("data-tm-tooltip");
       if (!tipText) {
         setTooltip(null);
         return;
       }
-
       const rect = svgRef.current!.getBoundingClientRect();
       setTooltip({
         text: tipText,
@@ -503,60 +439,6 @@ export default function TacticalMap({ svgUrl, mapName, onClose }: TacticalMapPro
     setTooltip(null);
   }, []);
 
-  /* ── Wheel zoom ────────────────────────────────────────────────────── */
-  const handleWheel = useCallback(
-    (e: React.WheelEvent) => {
-      e.preventDefault();
-      const delta = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP;
-      setZoom((prev) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, prev + delta)));
-    },
-    []
-  );
-
-  /* ── Mouse drag pan ────────────────────────────────────────────────── */
-  const handleMouseDown = useCallback(
-    (e: React.MouseEvent) => {
-      if (e.button !== 0) return;
-      if (zoom <= 1) return;
-      isDragging.current = true;
-      dragStart.current = { x: e.clientX, y: e.clientY };
-      panStart.current = { ...pan };
-      if (containerRef.current)
-        containerRef.current.style.cursor = "grabbing";
-    },
-    [zoom, pan]
-  );
-
-  const handleGlobalMouseMove = useCallback(
-    (e: MouseEvent) => {
-      if (!isDragging.current) return;
-      const dx = e.clientX - dragStart.current.x;
-      const dy = e.clientY - dragStart.current.y;
-      panCallback.current({
-        x: panStart.current.x + dx,
-        y: panStart.current.y + dy,
-      });
-    },
-    []
-  );
-
-  const handleGlobalMouseUp = useCallback(() => {
-    if (isDragging.current) {
-      isDragging.current = false;
-      if (containerRef.current)
-        containerRef.current.style.cursor = zoom > 1 ? "grab" : "default";
-    }
-  }, [zoom]);
-
-  useEffect(() => {
-    window.addEventListener("mousemove", handleGlobalMouseMove);
-    window.addEventListener("mouseup", handleGlobalMouseUp);
-    return () => {
-      window.removeEventListener("mousemove", handleGlobalMouseMove);
-      window.removeEventListener("mouseup", handleGlobalMouseUp);
-    };
-  }, [handleGlobalMouseMove, handleGlobalMouseUp]);
-
   /* ── Touch: pinch-to-zoom + drag-to-pan ────────────────────────────── */
   const getTouchDistance = (touches: React.TouchList) => {
     const dx = touches[0].clientX - touches[1].clientX;
@@ -564,28 +446,20 @@ export default function TacticalMap({ svgUrl, mapName, onClose }: TacticalMapPro
     return Math.sqrt(dx * dx + dy * dy);
   };
 
-  const getTouchCenter = (touches: React.TouchList) => ({
-    x: (touches[0].clientX + touches[1].clientX) / 2,
-    y: (touches[0].clientY + touches[1].clientY) / 2,
-  });
-
   const handleTouchStart = useCallback(
     (e: React.TouchEvent) => {
       if (e.touches.length === 2) {
-        // Pinch start
         lastTouchDist.current = getTouchDistance(e.touches);
-        lastTouchCenter.current = getTouchCenter(e.touches);
-      } else if (e.touches.length === 1 && zoom > 1) {
-        // Pan start
+      } else if (e.touches.length === 1 && zoomRef.current > 1) {
         isDragging.current = true;
         dragStart.current = {
           x: e.touches[0].clientX,
           y: e.touches[0].clientY,
         };
-        panStart.current = { ...pan };
+        panStart.current = { ...panRef.current };
       }
     },
-    [zoom, pan]
+    []
   );
 
   const handleTouchMove = useCallback(
@@ -602,13 +476,16 @@ export default function TacticalMap({ svgUrl, mapName, onClose }: TacticalMapPro
         e.preventDefault();
         const dx = e.touches[0].clientX - dragStart.current.x;
         const dy = e.touches[0].clientY - dragStart.current.y;
-        setPan({
+        const rect = svgRef.current?.getBoundingClientRect();
+        if (!rect) return;
+        const newPan = {
           x: panStart.current.x + dx,
           y: panStart.current.y + dy,
-        });
+        };
+        setPan(clampPan(newPan, zoomRef.current, rect.width, rect.height));
       }
     },
-    []
+    [clampPan]
   );
 
   const handleTouchEnd = useCallback(() => {
@@ -616,10 +493,16 @@ export default function TacticalMap({ svgUrl, mapName, onClose }: TacticalMapPro
   }, []);
 
   /* ── Zoom helpers ──────────────────────────────────────────────────── */
-  const zoomIn = () =>
-    setZoom((prev) => Math.min(MAX_ZOOM, prev + ZOOM_STEP));
-  const zoomOut = () =>
-    setZoom((prev) => Math.max(MIN_ZOOM, prev - ZOOM_STEP));
+  const zoomIn = () => {
+    const newZoom = Math.min(MAX_ZOOM, zoom + ZOOM_STEP);
+    setZoom(newZoom);
+    if (newZoom <= 1) setPan({ x: 0, y: 0 });
+  };
+  const zoomOut = () => {
+    const newZoom = Math.max(MIN_ZOOM, zoom - ZOOM_STEP);
+    setZoom(newZoom);
+    if (newZoom <= 1) setPan({ x: 0, y: 0 });
+  };
   const resetView = () => {
     setZoom(1);
     setPan({ x: 0, y: 0 });
@@ -641,7 +524,10 @@ export default function TacticalMap({ svgUrl, mapName, onClose }: TacticalMapPro
   }, [isFullscreen]);
 
   /* ── Render ────────────────────────────────────────────────────────── */
-  const transform = `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`;
+  // Transform: scale from center of container, then translate
+  const transform = zoom > 1
+    ? `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`
+    : "scale(1)";
 
   const layerBtn = (
     label: string,
@@ -650,10 +536,7 @@ export default function TacticalMap({ svgUrl, mapName, onClose }: TacticalMapPro
   ) => (
     <button
       onClick={() => toggleLayer(layer)}
-      style={{
-        ...STYLES.toolbarBtn,
-        ...(layers[layer] ? STYLES.toolbarBtnActive : {}),
-      }}
+      className={`tm-toolbar-btn ${layers[layer] ? "tm-toolbar-btn-active" : ""}`}
       title={`Toggle ${label}`}
     >
       {icon} {label}
@@ -663,16 +546,11 @@ export default function TacticalMap({ svgUrl, mapName, onClose }: TacticalMapPro
   return (
     <div
       ref={containerRef}
-      className="tactical-map-wrapper"
-      style={{
-        ...STYLES.wrapper,
-        ...(isFullscreen ? STYLES.wrapperFullscreen : {}),
-        ...(isMinimized && !isFullscreen ? STYLES.wrapperMinimized : {}),
-      }}
+      className={`tm-wrapper ${isFullscreen ? "tm-fullscreen" : ""} ${isMinimized && !isFullscreen ? "tm-minimized" : ""}`}
     >
       {/* ── Toolbar ──────────────────────────────────────────────── */}
-      <div className="tactical-map-toolbar" style={STYLES.toolbar}>
-        <span className="tactical-map-title" style={STYLES.mapTitle}>
+      <div className="tm-toolbar">
+        <span className="tm-title">
           {mapName} Tactical Map
         </span>
 
@@ -681,51 +559,47 @@ export default function TacticalMap({ svgUrl, mapName, onClose }: TacticalMapPro
         {layerBtn("Arrows", "arrows", "➡")}
         {layerBtn("Zones", "zones", "🗺")}
 
-        <span style={STYLES.separator} />
+        <span className="tm-sep" />
 
         <button
           onClick={zoomOut}
           disabled={zoom <= MIN_ZOOM}
-          style={{
-            ...STYLES.toolbarBtn,
-            opacity: zoom <= MIN_ZOOM ? 0.4 : 1,
-          }}
+          className="tm-toolbar-btn"
+          style={{ opacity: zoom <= MIN_ZOOM ? 0.4 : 1 }}
           title="Zoom out"
         >
           −
         </button>
-        <span style={STYLES.zoomLabel}>{Math.round(zoom * 100)}%</span>
+        <span className="tm-zoom-label">{Math.round(zoom * 100)}%</span>
         <button
           onClick={zoomIn}
           disabled={zoom >= MAX_ZOOM}
-          style={{
-            ...STYLES.toolbarBtn,
-            opacity: zoom >= MAX_ZOOM ? 0.4 : 1,
-          }}
+          className="tm-toolbar-btn"
+          style={{ opacity: zoom >= MAX_ZOOM ? 0.4 : 1 }}
           title="Zoom in"
         >
           +
         </button>
         <button
           onClick={resetView}
-          style={STYLES.toolbarBtn}
+          className="tm-toolbar-btn"
           title="Reset view"
         >
           ↺
         </button>
 
-        <span style={STYLES.spacer} />
+        <span className="tm-spacer" />
 
         <button
           onClick={() => setIsMinimized((p) => !p)}
-          style={STYLES.toolbarBtn}
+          className="tm-toolbar-btn"
           title={isMinimized ? "Expand" : "Minimize"}
         >
           {isMinimized ? "▾" : "▴"}
         </button>
         <button
           onClick={() => setIsFullscreen((p) => !p)}
-          style={STYLES.toolbarBtn}
+          className="tm-toolbar-btn"
           title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
         >
           {isFullscreen ? "✕" : "⛶"}
@@ -733,7 +607,8 @@ export default function TacticalMap({ svgUrl, mapName, onClose }: TacticalMapPro
         {onClose && (
           <button
             onClick={onClose}
-            style={{ ...STYLES.toolbarBtn, color: "#EF5350" }}
+            className="tm-toolbar-btn"
+            style={{ color: "#EF5350" }}
             title="Close map"
           >
             ✕
@@ -744,18 +619,16 @@ export default function TacticalMap({ svgUrl, mapName, onClose }: TacticalMapPro
       {/* ── SVG Container ────────────────────────────────────────── */}
       {isMinimized && !isFullscreen ? (
         <div
-          style={STYLES.minimizedContent}
+          className="tm-minimized-msg"
           onClick={() => setIsMinimized(false)}
         >
-          Map minimized — click to expand
+          Map minimized — tap to expand
         </div>
       ) : (
         <div
           ref={svgRef}
-          className="tactical-map-svg-container"
+          className={`tm-svg-container ${isFullscreen ? "tm-svg-fullscreen" : ""}`}
           style={{
-            ...STYLES.svgContainer,
-            ...(isFullscreen ? STYLES.svgContainerFullscreen : {}),
             cursor: zoom > 1 ? (isDragging.current ? "grabbing" : "grab") : "default",
           }}
           onWheel={handleWheel}
@@ -766,14 +639,14 @@ export default function TacticalMap({ svgUrl, mapName, onClose }: TacticalMapPro
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
         >
-          {loading && <div style={STYLES.loadingOverlay}>Loading map...</div>}
-          {error && <div style={STYLES.errorOverlay}>{error}</div>}
+          {loading && <div className="tm-loading">Loading map...</div>}
+          {error && <div className="tm-error">{error}</div>}
           {svgContent && (
             <div
+              className="tm-svg-inner"
               style={{
-                ...STYLES.svgInner,
-                ...(isDragging.current ? STYLES.svgInnerDragging : {}),
                 transform,
+                transition: isDragging.current ? "none" : "transform 0.1s ease-out",
               }}
               dangerouslySetInnerHTML={{ __html: svgContent }}
             />
@@ -781,7 +654,7 @@ export default function TacticalMap({ svgUrl, mapName, onClose }: TacticalMapPro
 
           {/* Tooltip */}
           {tooltip && (
-            <div style={{ ...STYLES.tooltip, left: tooltip.x, top: tooltip.y }}>
+            <div className="tm-tooltip" style={{ left: tooltip.x, top: tooltip.y }}>
               {tooltip.text}
             </div>
           )}

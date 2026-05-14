@@ -98,29 +98,188 @@
   }
 }
 
-/* Tactical Map – mobile responsive overrides */
+/* ==========================================================================
+   Tactical Map Component – full CSS
+   ========================================================================== */
+
+/* Wrapper */
+.tm-wrapper {
+  position: relative;
+  background: #1a1a2e;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.1);
+  overflow: hidden;
+  margin-top: 8px;
+  font-family: sans-serif;
+  width: 100%;
+}
+.tm-fullscreen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9999;
+  border-radius: 0;
+  border: none;
+  margin: 0;
+}
+.tm-minimized {
+  height: 48px;
+}
+
+/* Toolbar */
+.tm-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  background: rgba(0,0,0,0.5);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  flex-wrap: wrap;
+}
+.tm-fullscreen .tm-toolbar {
+  /* In fullscreen, toolbar is fixed at top */
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.tm-toolbar-btn {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 6px;
+  color: #ccc;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 4px 8px;
+  line-height: 18px;
+  transition: all 0.15s ease;
+  user-select: none;
+  touch-action: manipulation;
+}
+.tm-toolbar-btn:hover {
+  background: rgba(255,255,255,0.15);
+}
+.tm-toolbar-btn-active {
+  background: rgba(124,77,255,0.3) !important;
+  border-color: rgba(124,77,255,0.5) !important;
+  color: #fff !important;
+}
+
+.tm-title {
+  color: #eee;
+  font-size: 13px;
+  font-weight: 600;
+  margin-right: 8px;
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+.tm-sep {
+  width: 1px;
+  height: 18px;
+  background: rgba(255,255,255,0.12);
+  margin: 0 4px;
+}
+.tm-spacer { flex: 1; }
+.tm-zoom-label {
+  color: #aaa;
+  font-size: 11px;
+  min-width: 32px;
+  text-align: center;
+}
+
+/* SVG container */
+.tm-svg-container {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  cursor: default;
+  position: relative;
+  background: #1a1a2e;
+  touch-action: none;
+}
+.tm-svg-fullscreen {
+  aspect-ratio: unset;
+  height: calc(100dvh - 42px);
+  width: 100%;
+}
+
+/* SVG inner wrapper – handles zoom/pan transform */
+.tm-svg-inner {
+  width: 100%;
+  height: 100%;
+  transform-origin: 0 0;
+}
+.tm-svg-inner svg {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
+
+/* Tooltip */
+.tm-tooltip {
+  position: absolute;
+  z-index: 100;
+  background: rgba(0,0,0,0.88);
+  color: #fff;
+  font-size: 12px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  pointer-events: none;
+  white-space: nowrap;
+  border: 1px solid rgba(255,255,255,0.15);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+  transform: translate(-50%, -100%);
+  margin-top: -8px;
+}
+
+/* Loading / error */
+.tm-loading, .tm-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  font-size: 14px;
+}
+.tm-loading { color: #888; }
+.tm-error { color: #EF5350; }
+
+/* Minimized */
+.tm-minimized-msg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 48px;
+  color: #aaa;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+/* ── Mobile responsive (≤640px) ──────────────────────────────────────── */
 @media (max-width: 640px) {
-  .tactical-map-wrapper {
-    border-radius: 0 !important;
-    border-left: none !important;
-    border-right: none !important;
-    margin-left: -1rem !important;
-    margin-right: -1rem !important;
-    width: calc(100% + 2rem) !important;
+  .tm-wrapper {
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
   }
-  .tactical-map-svg-container {
-    aspect-ratio: 1 / 1 !important;
-    max-height: 80vh !important;
+  .tm-svg-container {
+    max-height: 75vh;
   }
-  .tactical-map-toolbar {
-    gap: 2px !important;
-    padding: 4px 6px !important;
+  .tm-svg-fullscreen {
+    height: calc(100dvh - 38px);
+    max-height: none;
   }
-  .tactical-map-toolbar button {
-    font-size: 11px !important;
-    padding: 3px 6px !important;
+  .tm-toolbar {
+    gap: 2px;
+    padding: 4px 6px;
   }
-  .tactical-map-title {
-    font-size: 11px !important;
+  .tm-toolbar-btn {
+    font-size: 11px;
+    padding: 3px 6px;
+  }
+  .tm-title {
+    font-size: 11px;
+    margin-right: 4px;
   }
 }

@@ -257,30 +257,29 @@ function ChatContent() {
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4 md:px-6">
         {messages.map((msg, i) => (
-          <div
-            key={i}
-            className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-          >
+          <div key={i}>
             <div
-              className={`max-w-3xl rounded-2xl px-5 py-3 ${
-                msg.role === "user"
-                  ? "bg-accent-purple/20 border border-accent-purple/30 text-gray-100"
-                  : "bg-surface-card border border-surface-border text-gray-200"
-              }`}
+              className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
             >
-              {msg.role === "user" ? (
-                <div className="text-sm leading-relaxed">{msg.content}</div>
-              ) : msg.content ? (
-                <>
+              <div
+                className={`max-w-3xl rounded-2xl px-5 py-3 ${
+                  msg.role === "user"
+                    ? "bg-accent-purple/20 border border-accent-purple/30 text-gray-100"
+                    : "bg-surface-card border border-surface-border text-gray-200"
+                }`}
+              >
+                {msg.role === "user" ? (
+                  <div className="text-sm leading-relaxed">{msg.content}</div>
+                ) : msg.content ? (
                   <MarkdownRenderer content={msg.content} />
-                </>
-              ) : (
-                <span className="animate-pulse text-gray-500">Thinking...</span>
-              )}
+                ) : (
+                  <span className="animate-pulse text-gray-500">Thinking...</span>
+                )}
+              </div>
             </div>
-            {/* Map displayed OUTSIDE the chat bubble for full-width on mobile */}
+            {/* Map on its own row, full-width on mobile */}
             {msg.role === "assistant" && msg.mapImage && (
-              <div className="-mx-4 md:mx-0 w-[calc(100%+2rem)] md:w-full">
+              <div className="-mx-4 md:mx-0 w-[calc(100%+2rem)] md:w-full mt-2">
                 <TacticalMap
                   svgUrl={msg.mapImage.url}
                   mapName={msg.mapImage.map}

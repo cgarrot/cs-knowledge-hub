@@ -109,8 +109,8 @@
     width: calc(100% + 2rem) !important;
   }
   .tactical-map-svg-container {
-    height: 60vh !important;
-    max-height: none !important;
+    aspect-ratio: 1 / 1 !important;
+    max-height: 80vh !important;
   }
   .tactical-map-toolbar {
     gap: 2px !important;

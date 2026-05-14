@@ -315,13 +315,13 @@ const STYLES = {
     flex: 1,
   },
   svgContainer: {
-    height: "50vh",
-    maxHeight: "400px",
+    width: "100%",
     overflow: "hidden",
     cursor: "grab",
     position: "relative" as const,
     background: "#1a1a2e",
     touchAction: "none",
+    aspectRatio: "1 / 1",
   },
   svgContainerFullscreen: {
     height: "calc(100vh - 42px)",

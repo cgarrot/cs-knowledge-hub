@@ -17,12 +17,19 @@ interface LayerVisibility {
   utility: boolean;
   arrows: boolean;
   zones: boolean;
+  timings: boolean;
 }
 
 interface TooltipData {
   text: string;
   x: number;
   y: number;
+}
+
+interface SvgLoadState {
+  url: string;
+  content: string;
+  error: string | null;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -44,9 +51,8 @@ const UTILITY_TYPE_MAP: Record<string, string> = {
   H: "HE Grenade",
 };
 
-const BASE_SCALE = 1.25;
 const MIN_ZOOM = 1;
-const MAX_ZOOM = 4;
+const MAX_ZOOM = 3;
 const ZOOM_STEP = 0.25;
 
 /* -------------------------------------------------------------------------- */
@@ -151,14 +157,20 @@ function annotateSvg(svgEl: SVGSVGElement) {
   svgEl.querySelectorAll("line").forEach((el) => {
     const markerEnd = el.getAttribute("marker-end");
     if (markerEnd) {
-      el.setAttribute("data-tm-type", "arrow");
+      if (!el.hasAttribute("data-tm-type")) {
+        el.setAttribute("data-tm-type", "arrow");
+      }
       el.classList.add("tm-arrow");
-      const arrowKind = markerEnd.includes("Push") ? "Push" : "Throw";
-      el.setAttribute("data-tm-tooltip", `${arrowKind} arrow`);
+      if (!el.hasAttribute("data-tm-tooltip")) {
+        const arrowKind = markerEnd.includes("Push") ? "Push" : "Throw";
+        el.setAttribute("data-tm-tooltip", `${arrowKind} arrow`);
+      }
     } else {
       const dash = el.getAttribute("stroke-dasharray");
       if (dash) {
-        el.setAttribute("data-tm-type", "utility");
+        if (!el.hasAttribute("data-tm-type")) {
+          el.setAttribute("data-tm-type", "utility");
+        }
         el.classList.add("tm-utility");
       }
     }
@@ -220,6 +232,9 @@ function applyLayerVisibility(
       case "zone":
         visible = layers.zones;
         break;
+      case "timing":
+        visible = layers.timings;
+        break;
       default:
         visible = true;
     }
@@ -234,7 +249,11 @@ function applyLayerVisibility(
 
 export default function TacticalMap({ svgUrl, mapName, onClose }: TacticalMapProps) {
   /* ── State ─────────────────────────────────────────────────────────── */
-  const [svgContent, setSvgContent] = useState("");
+  const [svgState, setSvgState] = useState<SvgLoadState>({
+    url: "",
+    content: "",
+    error: null,
+  });
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [layers, setLayers] = useState<LayerVisibility>({
@@ -242,12 +261,12 @@ export default function TacticalMap({ svgUrl, mapName, onClose }: TacticalMapPro
     utility: true,
     arrows: true,
     zones: true,
+    timings: true,
   });
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
+  const [isPanning, setIsPanning] = useState(false);
   const [tooltip, setTooltip] = useState<TooltipData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   /* ── Refs ──────────────────────────────────────────────────────────── */
   const containerRef = useRef<HTMLDivElement>(null);
@@ -267,8 +286,6 @@ export default function TacticalMap({ svgUrl, mapName, onClose }: TacticalMapPro
   /* ── Fetch SVG ─────────────────────────────────────────────────────── */
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    setError(null);
 
     fetch(svgUrl)
       .then((res) => {
@@ -277,14 +294,16 @@ export default function TacticalMap({ svgUrl, mapName, onClose }: TacticalMapPro
       })
       .then((svg) => {
         if (!cancelled) {
-          setSvgContent(svg);
-          setLoading(false);
+          setSvgState({ url: svgUrl, content: svg, error: null });
         }
       })
       .catch((err) => {
         if (!cancelled) {
-          setError(err.message);
-          setLoading(false);
+          setSvgState({
+            url: svgUrl,
+            content: "",
+            error: err instanceof Error ? err.message : "Failed to load tactical map",
+          });
         }
       });
 
@@ -292,6 +311,10 @@ export default function TacticalMap({ svgUrl, mapName, onClose }: TacticalMapPro
       cancelled = true;
     };
   }, [svgUrl]);
+
+  const svgContent = svgState.url === svgUrl ? svgState.content : "";
+  const error = svgState.url === svgUrl ? svgState.error : null;
+  const loading = !svgContent && !error;
 
   /* ── Annotate SVG after injection ──────────────────────────────────── */
   useEffect(() => {
@@ -303,19 +326,6 @@ export default function TacticalMap({ svgUrl, mapName, onClose }: TacticalMapPro
     svgEl.setAttribute("width", "100%");
     svgEl.setAttribute("height", "100%");
     svgEl.style.display = "block";
-
-    // Fix: make the DISPLAY_SCALE 1.25 from map-renderer actually visible.
-    // The renderer outputs viewBox="0 0 1280 1280" + <g transform="scale(1.25)">
-    // which cancels out visually. We change viewBox to "0 0 1024 1024" and
-    // remove the internal scale — the component applies a CSS base scale instead.
-    const vb = svgEl.getAttribute("viewBox") || "";
-    if (vb === "0 0 1280 1280") {
-      svgEl.setAttribute("viewBox", "0 0 1024 1024");
-    }
-    const g = svgEl.querySelector("g");
-    if (g && g.getAttribute("transform") === "scale(1.25)") {
-      g.removeAttribute("transform");
-    }
 
     annotateSvg(svgEl);
   }, [svgContent]);
@@ -330,10 +340,9 @@ export default function TacticalMap({ svgUrl, mapName, onClose }: TacticalMapPro
 
   /* ── Clamp pan to keep SVG visible ─────────────────────────────────── */
   const clampPan = useCallback((p: { x: number; y: number }, z: number, containerW: number, containerH: number) => {
-    const effectiveZ = z * BASE_SCALE;
-    if (effectiveZ <= 1) return { x: 0, y: 0 };
-    const scaledW = containerW * effectiveZ;
-    const scaledH = containerH * effectiveZ;
+    if (z <= 1) return { x: 0, y: 0 };
+    const scaledW = containerW * z;
+    const scaledH = containerH * z;
     // With transform-origin: 0 0, content expands right/down when scaled.
     // Valid range: x in [-(scaledW - containerW), 0], y in [-(scaledH - containerH), 0]
     return {
@@ -374,6 +383,7 @@ export default function TacticalMap({ svgUrl, mapName, onClose }: TacticalMapPro
       if (e.button !== 0) return;
       e.preventDefault();
       isDragging.current = true;
+      setIsPanning(true);
       dragStart.current = { x: e.clientX, y: e.clientY };
       panStart.current = { ...panRef.current };
       if (svgRef.current)
@@ -401,6 +411,7 @@ export default function TacticalMap({ svgUrl, mapName, onClose }: TacticalMapPro
   const handleGlobalMouseUp = useCallback(() => {
     if (isDragging.current) {
       isDragging.current = false;
+      setIsPanning(false);
       if (svgRef.current)
         svgRef.current.style.cursor = "grab";
     }
@@ -465,6 +476,7 @@ export default function TacticalMap({ svgUrl, mapName, onClose }: TacticalMapPro
         lastTouchCenter.current = { x: cx, y: cy };
       } else if (e.touches.length === 1) {
         isDragging.current = true;
+        setIsPanning(true);
         dragStart.current = {
           x: e.touches[0].clientX,
           y: e.touches[0].clientY,
@@ -522,6 +534,7 @@ export default function TacticalMap({ svgUrl, mapName, onClose }: TacticalMapPro
 
   const handleTouchEnd = useCallback(() => {
     isDragging.current = false;
+    setIsPanning(false);
   }, []);
 
   /* ── Zoom helpers ──────────────────────────────────────────────────── */
@@ -554,9 +567,9 @@ export default function TacticalMap({ svgUrl, mapName, onClose }: TacticalMapPro
   }, [isFullscreen]);
 
   /* ── Render ────────────────────────────────────────────────────────── */
-  // Transform with base scale so DISPLAY_SCALE=1.25 is actually visible
-  const effectiveZoom = zoom * BASE_SCALE;
-  const transform = `translate(${pan.x}px, ${pan.y}px) scale(${effectiveZoom})`;
+  // The generated SVG owns annotation sizing/alignment; this transform is only
+  // the user's interactive viewer zoom/pan.
+  const transform = `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`;
 
   const layerBtn = (
     label: string,
@@ -587,6 +600,7 @@ export default function TacticalMap({ svgUrl, mapName, onClose }: TacticalMapPro
         {layerBtn("Utility", "utility", "💨")}
         {layerBtn("Arrows", "arrows", "➡")}
         {layerBtn("Zones", "zones", "🗺")}
+        {layerBtn("Timing", "timings", "⏱")}
 
         <span className="tm-sep" />
 
@@ -599,7 +613,7 @@ export default function TacticalMap({ svgUrl, mapName, onClose }: TacticalMapPro
         >
           −
         </button>
-        <span className="tm-zoom-label">{Math.round(effectiveZoom * 100)}%</span>
+        <span className="tm-zoom-label">{Math.round(zoom * 100)}%</span>
         <button
           onClick={zoomIn}
           disabled={zoom >= MAX_ZOOM}
@@ -658,7 +672,7 @@ export default function TacticalMap({ svgUrl, mapName, onClose }: TacticalMapPro
           ref={svgRef}
           className={`tm-svg-container ${isFullscreen ? "tm-svg-fullscreen" : ""}`}
           style={{
-            cursor: isDragging.current ? "grabbing" : "grab",
+            cursor: isPanning ? "grabbing" : "grab",
           }}
           onWheel={handleWheel}
           onMouseDown={handleMouseDown}
@@ -675,7 +689,7 @@ export default function TacticalMap({ svgUrl, mapName, onClose }: TacticalMapPro
               className="tm-svg-inner"
               style={{
                 transform,
-                transition: isDragging.current ? "none" : "transform 0.1s ease-out",
+                transition: isPanning ? "none" : "transform 0.1s ease-out",
               }}
               dangerouslySetInnerHTML={{ __html: svgContent }}
             />

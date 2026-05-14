@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import ReactMarkdown from "react-markdown";
@@ -136,21 +136,18 @@ function ChatContent() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Auto-send initial query from ?q= param
-  useEffect(() => {
-    if (initialQuery && !initialQuerySent.current) {
-      initialQuerySent.current = true;
-      setInput(initialQuery);
-      setTimeout(() => {
-        sendMessage(initialQuery);
-      }, 100);
-    }
-  }, [initialQuery]);
-
-  async function sendMessage(text: string) {
+  const sendMessage = useCallback(async (text: string) => {
     if (!text.trim() || isLoading) return;
 
     const userMessage = text.trim();
+    const requestMessages = [
+      ...messages,
+      { role: "user" as const, content: userMessage },
+    ]
+      .filter((message) => message.content.trim().length > 0)
+      .slice(-12)
+      .map(({ role, content }) => ({ role, content }));
+
     setInput("");
     setMessages((prev) => [...prev, { role: "user", content: userMessage }]);
     setIsLoading(true);
@@ -161,7 +158,7 @@ function ChatContent() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: [{ role: "user", content: userMessage }],
+          messages: requestMessages,
         }),
       });
 
@@ -217,8 +214,8 @@ function ChatContent() {
                   return updated;
                 });
               }
-            } catch {
-              // Skip malformed chunks
+            } catch (parseError) {
+              console.warn("[chat] Skipping malformed SSE chunk:", parseError);
             }
           }
         }
@@ -236,7 +233,18 @@ function ChatContent() {
     } finally {
       setIsLoading(false);
     }
-  }
+  }, [isLoading, messages]);
+
+  // Auto-send initial query from ?q= param
+  useEffect(() => {
+    if (initialQuery && !initialQuerySent.current) {
+      initialQuerySent.current = true;
+      setInput(initialQuery);
+      setTimeout(() => {
+        sendMessage(initialQuery);
+      }, 100);
+    }
+  }, [initialQuery, sendMessage]);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

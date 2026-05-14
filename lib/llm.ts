@@ -47,19 +47,17 @@ function cleanForContext(raw: string): string {
  * Optionally enriches the prompt with map-specific context if the user message
  * mentions a CS2 map name.
  */
-export function buildRAGPrompt(context: string, userMessage?: string): string {
+export function buildRAGPrompt(context: string, userMessage?: string, mapNameOverride?: string | null): string {
   const cleanedContext = cleanForContext(context);
 
   // Detect map mention and append map context + tactical instructions
   let mapSection = "";
-  if (userMessage) {
-    const mapName = detectMapMention(userMessage);
-    if (mapName) {
-      const mapCtx = getMapContext(mapName);
-      mapSection = `
- 
+  const mapName = mapNameOverride || (userMessage ? detectMapMention(userMessage) : null);
+  if (mapName) {
+    const mapCtx = getMapContext(mapName);
+    mapSection = `
+  
 ${mapCtx}`;
-    }
   }
 
   return `You are a CS2 coach and strategy advisor. Your job is to help players improve their Counter-Strike 2 gameplay with clear, actionable advice.
@@ -72,6 +70,7 @@ RULES:
 - NEVER say "according to the source" or "the analysis shows" — just give the advice
 - Structure your answer with clear sections using headers (##) and bullet points
 - Include specific callouts: nade lineups, angles to hold, crosshair placement tips, economy rules
+- For map tactics, include role assignments, utility purpose/timing, movement routes, rotations, and post-plant/retake contingencies when relevant
 - If listing strategies, explain WHY they work, not just WHAT they are
 - If the context doesn't cover the topic well, supplement with your CS2 knowledge and say so briefly
 - Keep it focused — answer the question, don't dump everything you know
@@ -145,8 +144,8 @@ export async function* streamChat(
           if (content) {
             yield content;
           }
-        } catch {
-          // Skip malformed JSON lines
+        } catch (parseError) {
+          console.warn("[llm] Skipping malformed SSE JSON line:", parseError);
         }
       }
     }

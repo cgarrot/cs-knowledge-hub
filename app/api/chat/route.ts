@@ -6,6 +6,7 @@ import {
   extractTacticalWithLLM,
   extractTacticalFromText,
   getDefaultTactical,
+  repairTacticalCallouts,
   toRendererOptions,
   type TacticalData,
 } from "@/lib/map-detection";
@@ -28,6 +29,10 @@ interface IndexEntry {
 const RAW_DIR = process.env.RAW_DIR || path.join(process.env.DATA_DIR || "/data", "sources");
 const INDEX_PATH = process.env.CATEGORY_INDEX_PATH || path.join(process.env.DATA_DIR || "/data", "full-index.json");
 const LLM_MODEL = process.env.LLM_MODEL || "deepseek-v4-flash";
+const MAX_CHAT_BODY_CHARS = 40_000;
+const MAX_CHAT_MESSAGES = 12;
+const MAX_MESSAGE_CHARS = 8_000;
+const MAX_TOTAL_MESSAGE_CHARS = 30_000;
 
 let fileIndexCache: { entries: IndexEntry[]; timestamp: number } | null = null;
 
@@ -106,7 +111,9 @@ function searchRelevantDocs(query: string, maxResults = 8): { context: string; s
           content = content.slice(0, 2500) + "\n...[truncated]";
         }
       }
-    } catch {}
+    } catch (error) {
+      console.warn("[chat] Failed to read indexed source:", error);
+    }
 
     const meta = [
       entry.category ? `Category: ${entry.category}` : "",
@@ -151,23 +158,91 @@ export async function GET(request: NextRequest) {
   }
 }
 
-interface ChatRequestBody {
-  messages: ChatMessage[];
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function parseChatRequest(rawBody: string): { messages?: ChatMessage[]; error?: string; status?: number } {
+  if (rawBody.length > MAX_CHAT_BODY_CHARS) {
+    return { error: "Chat request body is too large", status: 413 };
+  }
+
+  let body: unknown;
+  try {
+    body = JSON.parse(rawBody);
+  } catch {
+    return { error: "Invalid JSON request body", status: 400 };
+  }
+
+  if (!isRecord(body) || !Array.isArray(body.messages)) {
+    return { error: "No messages provided", status: 400 };
+  }
+
+  if (body.messages.length === 0) {
+    return { error: "No messages provided", status: 400 };
+  }
+  if (body.messages.length > MAX_CHAT_MESSAGES) {
+    return { error: `Too many messages; max ${MAX_CHAT_MESSAGES}`, status: 400 };
+  }
+
+  let totalChars = 0;
+  const messages: ChatMessage[] = [];
+  for (const [index, message] of body.messages.entries()) {
+    if (!isRecord(message)) {
+      return { error: `Message ${index} must be an object`, status: 400 };
+    }
+
+    const { role, content } = message;
+    if (role !== "user" && role !== "assistant") {
+      return { error: `Message ${index} has an invalid role`, status: 400 };
+    }
+    if (typeof content !== "string" || content.trim().length === 0) {
+      return { error: `Message ${index} must include text content`, status: 400 };
+    }
+    if (content.length > MAX_MESSAGE_CHARS) {
+      return { error: `Message ${index} is too long`, status: 413 };
+    }
+
+    totalChars += content.length;
+    if (totalChars > MAX_TOTAL_MESSAGE_CHARS) {
+      return { error: "Chat message payload is too large", status: 413 };
+    }
+
+    messages.push({ role, content });
+  }
+
+  if (messages[messages.length - 1].role !== "user") {
+    return { error: "Last message must be from user", status: 400 };
+  }
+
+  return { messages };
+}
+
+function repairCandidate(
+  tactical: TacticalData | null,
+  mapName: string,
+  source: string
+): TacticalData | null {
+  if (!tactical) return null;
+  const repaired = repairTacticalCallouts({ ...tactical, map: mapName });
+  if (!repaired) {
+    console.log(`[chat] ${source} tactical data had no valid callouts after repair; trying fallback`);
+  }
+  return repaired;
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const body: ChatRequestBody = await request.json();
-    const { messages } = body;
-
-    if (!messages || messages.length === 0) {
-      return NextResponse.json({ error: "No messages provided" }, { status: 400 });
+    const parsedRequest = parseChatRequest(await request.text());
+    if (!parsedRequest.messages) {
+      return NextResponse.json(
+        { error: parsedRequest.error || "Invalid chat request" },
+        { status: parsedRequest.status || 400 }
+      );
     }
+    const { messages } = parsedRequest;
 
     const lastMessage = messages[messages.length - 1];
-    if (lastMessage.role !== "user") {
-      return NextResponse.json({ error: "Last message must be from user" }, { status: 400 });
-    }
 
     const question = lastMessage.content;
     const { context, sources } = searchRelevantDocs(question, 8);
@@ -188,7 +263,11 @@ export async function POST(request: NextRequest) {
 
     const systemMessage: ChatMessage = {
       role: "system",
-      content: buildRAGPrompt(context || "No specific documents found, answer from general CS2 knowledge.", question),
+      content: buildRAGPrompt(
+        context || "No specific documents found, answer from general CS2 knowledge.",
+        question,
+        detectedMap
+      ),
     };
 
     const llmMessages: ChatMessage[] = [systemMessage, ...messages];
@@ -219,7 +298,11 @@ export async function POST(request: NextRequest) {
               // STAGE 1: LLM-based extraction (most reliable)
               if (detectedMap) {
                 console.log(`[chat] Attempting LLM extraction for map: ${detectedMap}`);
-                tactical = await extractTacticalWithLLM(fullResponse, detectedMap);
+                tactical = repairCandidate(
+                  await extractTacticalWithLLM(fullResponse, detectedMap),
+                  detectedMap,
+                  "LLM extraction"
+                );
               }
 
               // FALLBACK 1: Text extraction via regex
@@ -228,14 +311,18 @@ export async function POST(request: NextRequest) {
                 const extracted = extractTacticalFromText(fullResponse, detectedMap);
                 if (extracted) {
                   console.log(`[chat] Text extraction succeeded: ${extracted.players.length} players`);
-                  tactical = extracted;
+                  tactical = repairCandidate(extracted, detectedMap, "Text extraction");
                 }
               }
 
               // FALLBACK 2: Deterministic defaults
               if (!tactical && detectedMap) {
                 console.log(`[chat] Text extraction failed, using defaults for map: ${detectedMap}`);
-                tactical = getDefaultTactical(detectedMap, fullResponse);
+                tactical = repairCandidate(
+                  getDefaultTactical(detectedMap, fullResponse),
+                  detectedMap,
+                  "Default tactical"
+                );
               }
 
               if (tactical) {
@@ -267,7 +354,9 @@ export async function POST(request: NextRequest) {
               });
               controller.enqueue(encoder.encode(`data: ${errorData}\n\n`));
               controller.enqueue(encoder.encode("data: [DONE]\n\n"));
-            } catch {}
+            } catch (enqueueError) {
+              console.warn("[chat] Failed to send stream error event:", enqueueError);
+            }
             controller.close();
             closed = true;
 
@@ -334,7 +423,8 @@ async function generateTacticalMap(
   try {
     // HIGH-1 fix: Validate map name against allowlist
     const { MAP_NAMES } = await import("@/lib/map-detection");
-    if (!MAP_NAMES.includes(tactical.map as any)) {
+    const validMapNames: readonly string[] = MAP_NAMES;
+    if (!validMapNames.includes(tactical.map)) {
       console.warn(`[chat] Invalid map name rejected: ${tactical.map}`);
       return null;
     }

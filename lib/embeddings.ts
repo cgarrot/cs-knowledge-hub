@@ -8,18 +8,27 @@ import { pipeline } from "@huggingface/transformers";
 const EMBEDDING_MODEL = "Xenova/all-MiniLM-L6-v2";
 const EMBEDDING_DIM = 384;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let embedder: any = null;
+interface EmbeddingOutput {
+  data: Float32Array | number[];
+}
+
+type EmbeddingPipeline = (
+  text: string,
+  options: { pooling: "mean"; normalize: true }
+) => Promise<EmbeddingOutput>;
+
+let embedder: EmbeddingPipeline | null = null;
 
 /**
  * Initialize the embedding pipeline (lazy, cached).
  */
-async function getEmbedder(): Promise<any> {
+async function getEmbedder(): Promise<EmbeddingPipeline> {
   if (embedder) return embedder;
   console.log("[embeddings] Loading model:", EMBEDDING_MODEL);
-  embedder = await pipeline("feature-extraction", EMBEDDING_MODEL, {
+  const loaded = await pipeline("feature-extraction", EMBEDDING_MODEL, {
     dtype: "fp32",
   });
+  embedder = loaded as EmbeddingPipeline;
   console.log("[embeddings] Model loaded");
   return embedder;
 }

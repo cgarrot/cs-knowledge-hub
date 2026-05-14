@@ -9,6 +9,7 @@ import path from "path";
 import {
   type TacticalData,
   validateTacticalCallouts,
+  repairTacticalCallouts,
   toRendererOptions,
   MAP_NAMES,
 } from "@/lib/map-detection";
@@ -17,6 +18,205 @@ export const runtime = "nodejs";
 
 // Ensure the output directory exists
 const OUTPUT_DIR = path.join(process.cwd(), "public", "generated-maps");
+const MAX_REQUEST_CHARS = 50_000;
+const MAX_FIELD_CHARS = 500;
+const MAX_PLAYERS = 20;
+const MAX_UTILITY = 30;
+const MAX_ARROWS = 50;
+const MAX_PHASES = 8;
+const MAX_PHASE_CALLOUTS = 12;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function readString(
+  record: Record<string, unknown>,
+  key: string,
+  field: string,
+  required: boolean,
+  errors: string[],
+  maxLength = MAX_FIELD_CHARS
+): string | undefined {
+  const value = record[key];
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (trimmed.length === 0) {
+      if (required) errors.push(`${field} is required`);
+      return undefined;
+    }
+    if (trimmed.length > maxLength) {
+      errors.push(`${field} is too long`);
+      return undefined;
+    }
+    return trimmed;
+  }
+  if (value === undefined || value === null) {
+    if (required) errors.push(`${field} is required`);
+    return undefined;
+  }
+  errors.push(`${field} must be a string`);
+  return undefined;
+}
+
+function readArray(
+  record: Record<string, unknown>,
+  key: string,
+  field: string,
+  maxLength: number,
+  errors: string[]
+): unknown[] {
+  const value = record[key];
+  if (value === undefined || value === null) return [];
+  if (!Array.isArray(value)) {
+    errors.push(`${field} must be an array`);
+    return [];
+  }
+  if (value.length > maxLength) {
+    errors.push(`${field} exceeds max ${maxLength}`);
+    return [];
+  }
+  return value;
+}
+
+function normalizeTacticalPayload(rawBody: string): { tactical?: TacticalData; error?: string; status?: number } {
+  if (rawBody.length > MAX_REQUEST_CHARS) {
+    return { error: "Tactical request body is too large", status: 413 };
+  }
+
+  let body: unknown;
+  try {
+    body = JSON.parse(rawBody);
+  } catch {
+    return { error: "Invalid JSON request body", status: 400 };
+  }
+
+  if (!isRecord(body) || !isRecord(body.tactical)) {
+    return { error: "Missing tactical data", status: 400 };
+  }
+
+  const raw = body.tactical;
+  const errors: string[] = [];
+  const map = readString(raw, "map", "tactical.map", true, errors, 80)?.toLowerCase();
+  const sideRaw = readString(raw, "side", "tactical.side", true, errors, 8)?.toUpperCase();
+  const strategy = readString(raw, "strategy", "tactical.strategy", true, errors, 200);
+  const side = sideRaw === "CT" || sideRaw === "T" ? sideRaw : undefined;
+  if (sideRaw && !side) errors.push("tactical.side must be CT or T");
+
+  const playersRaw = readArray(raw, "players", "tactical.players", MAX_PLAYERS, errors);
+  const utilityRaw = readArray(raw, "utility", "tactical.utility", MAX_UTILITY, errors);
+  const arrowsRaw = readArray(raw, "arrows", "tactical.arrows", MAX_ARROWS, errors);
+  const phasesRaw = readArray(raw, "phases", "tactical.phases", MAX_PHASES, errors);
+
+  const players: TacticalData["players"] = [];
+  playersRaw.forEach((item, index) => {
+    if (!isRecord(item)) {
+      errors.push(`tactical.players[${index}] must be an object`);
+      return;
+    }
+    const position = readString(item, "position", `tactical.players[${index}].position`, true, errors);
+    const role = readString(item, "role", `tactical.players[${index}].role`, false, errors) || "support";
+    const teamRaw = readString(item, "team", `tactical.players[${index}].team`, false, errors, 8)?.toUpperCase();
+    const team = teamRaw === "CT" || teamRaw === "T" ? teamRaw : side;
+    if (teamRaw && teamRaw !== "CT" && teamRaw !== "T") errors.push(`tactical.players[${index}].team must be CT or T`);
+    if (position && team) {
+      players.push({
+        position,
+        role,
+        team,
+        label: readString(item, "label", `tactical.players[${index}].label`, false, errors),
+        timing: readString(item, "timing", `tactical.players[${index}].timing`, false, errors),
+        task: readString(item, "task", `tactical.players[${index}].task`, false, errors),
+      });
+    }
+  });
+
+  const utility: TacticalData["utility"] = [];
+  utilityRaw.forEach((item, index) => {
+    if (!isRecord(item)) {
+      errors.push(`tactical.utility[${index}] must be an object`);
+      return;
+    }
+    const to = readString(item, "to", `tactical.utility[${index}].to`, true, errors);
+    if (to) {
+      utility.push({
+        type: readString(item, "type", `tactical.utility[${index}].type`, false, errors, 40) || "smoke",
+        from: readString(item, "from", `tactical.utility[${index}].from`, false, errors) || "",
+        to,
+        description: readString(item, "description", `tactical.utility[${index}].description`, false, errors) || `Utility on ${to}`,
+        timing: readString(item, "timing", `tactical.utility[${index}].timing`, false, errors),
+        purpose: readString(item, "purpose", `tactical.utility[${index}].purpose`, false, errors),
+        player: readString(item, "player", `tactical.utility[${index}].player`, false, errors),
+      });
+    }
+  });
+
+  const arrows: TacticalData["arrows"] = [];
+  arrowsRaw.forEach((item, index) => {
+    if (!isRecord(item)) {
+      errors.push(`tactical.arrows[${index}] must be an object`);
+      return;
+    }
+    const from = readString(item, "from", `tactical.arrows[${index}].from`, true, errors);
+    const to = readString(item, "to", `tactical.arrows[${index}].to`, true, errors);
+    const typeRaw = readString(item, "type", `tactical.arrows[${index}].type`, false, errors, 40);
+    const type = typeRaw === "utility" || typeRaw === "rotation" || typeRaw === "movement" ? typeRaw : "movement";
+    if (from && to) {
+      arrows.push({
+        from,
+        to,
+        type,
+        label: readString(item, "label", `tactical.arrows[${index}].label`, false, errors),
+        timing: readString(item, "timing", `tactical.arrows[${index}].timing`, false, errors),
+        phase: readString(item, "phase", `tactical.arrows[${index}].phase`, false, errors),
+      });
+    }
+  });
+
+  const phases: NonNullable<TacticalData["phases"]> = [];
+  phasesRaw.forEach((item, index) => {
+    if (!isRecord(item)) {
+      errors.push(`tactical.phases[${index}] must be an object`);
+      return;
+    }
+    const name = readString(item, "name", `tactical.phases[${index}].name`, true, errors);
+    const calloutsRaw = readArray(item, "callouts", `tactical.phases[${index}].callouts`, MAX_PHASE_CALLOUTS, errors);
+    const callouts: string[] = [];
+    calloutsRaw.forEach((callout, calloutIndex) => {
+      if (typeof callout !== "string" || callout.trim().length === 0) {
+        errors.push(`tactical.phases[${index}].callouts[${calloutIndex}] must be a string`);
+      } else if (callout.length > MAX_FIELD_CHARS) {
+        errors.push(`tactical.phases[${index}].callouts[${calloutIndex}] is too long`);
+      } else {
+        callouts.push(callout.trim());
+      }
+    });
+    if (name) {
+      phases.push({
+        name,
+        timing: readString(item, "timing", `tactical.phases[${index}].timing`, false, errors),
+        description: readString(item, "description", `tactical.phases[${index}].description`, false, errors),
+        callouts,
+      });
+    }
+  });
+
+  if (errors.length > 0 || !map || !side || !strategy) {
+    return { error: errors[0] || "Invalid tactical data", status: 400 };
+  }
+
+  return {
+    tactical: { map, side, strategy, players, utility, arrows, phases },
+  };
+}
+
+function escSvgText(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
 
 function ensureOutputDir() {
   if (!fs.existsSync(OUTPUT_DIR)) {
@@ -56,8 +256,8 @@ function generateFallbackSVG(tactical: TacticalData): string {
     sites = data.sites || {};
     spawns = data.spawns || {};
     displayName = data.displayName || tactical.map;
-  } catch {
-    // No map data available, use defaults
+  } catch (error) {
+    console.warn("[map-tactics] Fallback SVG map data unavailable, using defaults:", error);
   }
 
   const calloutMap = new Map(callouts.map((c) => [c.name.toLowerCase(), c]));
@@ -75,7 +275,7 @@ function generateFallbackSVG(tactical: TacticalData): string {
 
   // Title
   elements.push(
-    `<text x="${width / 2}" y="30" fill="#e0e0e0" font-size="18" font-weight="bold" text-anchor="middle">${displayName} - ${tactical.side} ${tactical.strategy}</text>`
+    `<text x="${width / 2}" y="30" fill="#e0e0e0" font-size="18" font-weight="bold" text-anchor="middle">${escSvgText(`${displayName} - ${tactical.side} ${tactical.strategy}`)}</text>`
   );
 
   // Grid lines
@@ -91,7 +291,7 @@ function generateFallbackSVG(tactical: TacticalData): string {
     const sx = pos.x * scaleX;
     const sy = pos.y * scaleY + 20;
     elements.push(`<circle cx="${sx}" cy="${sy}" r="20" fill="none" stroke="#ff6b6b" stroke-width="2" opacity="0.6"/>`);
-    elements.push(`<text x="${sx}" y="${sy + 5}" fill="#ff6b6b" font-size="14" font-weight="bold" text-anchor="middle">${name}</text>`);
+    elements.push(`<text x="${sx}" y="${sy + 5}" fill="#ff6b6b" font-size="14" font-weight="bold" text-anchor="middle">${escSvgText(name)}</text>`);
   }
 
   // Spawn markers
@@ -100,7 +300,7 @@ function generateFallbackSVG(tactical: TacticalData): string {
     const sy = pos.y * scaleY + 20;
     const color = name === "CT" ? "#4ecdc4" : "#ff8c42";
     elements.push(`<rect x="${sx - 15}" y="${sy - 10}" width="30" height="20" rx="3" fill="${color}" opacity="0.4"/>`);
-    elements.push(`<text x="${sx}" y="${sy + 5}" fill="${color}" font-size="10" text-anchor="middle">${name}</text>`);
+    elements.push(`<text x="${sx}" y="${sy + 5}" fill="${color}" font-size="10" text-anchor="middle">${escSvgText(name)}</text>`);
   }
 
   // Arrow definitions
@@ -131,7 +331,7 @@ function generateFallbackSVG(tactical: TacticalData): string {
       const py = pos.y * scaleY + 20;
       const color = player.team === "CT" ? "#4ecdc4" : "#ff8c42";
       elements.push(`<circle cx="${px}" cy="${py}" r="8" fill="${color}" stroke="#fff" stroke-width="1.5"/>`);
-      elements.push(`<text x="${px}" y="${py - 12}" fill="${color}" font-size="9" text-anchor="middle">${player.role}</text>`);
+      elements.push(`<text x="${px}" y="${py - 12}" fill="${color}" font-size="9" text-anchor="middle">${escSvgText(player.role)}</text>`);
     }
   }
 
@@ -162,26 +362,18 @@ function generateFallbackSVG(tactical: TacticalData): string {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { tactical } = body as { tactical: TacticalData };
-
-    if (!tactical) {
+    const parsedRequest = normalizeTacticalPayload(await request.text());
+    if (!parsedRequest.tactical) {
       return NextResponse.json(
-        { success: false, error: "Missing tactical data" },
-        { status: 400 }
+        { success: false, error: parsedRequest.error || "Invalid tactical data" },
+        { status: parsedRequest.status || 400 }
       );
     }
-
-    // Validate required fields
-    if (!tactical.map || !tactical.side || !tactical.strategy) {
-      return NextResponse.json(
-        { success: false, error: "Missing required fields: map, side, strategy" },
-        { status: 400 }
-      );
-    }
+    const { tactical } = parsedRequest;
 
     // Validate map name
-    if (!MAP_NAMES.includes(tactical.map.toLowerCase() as any)) {
+    const validMapNames: readonly string[] = MAP_NAMES;
+    if (!validMapNames.includes(tactical.map)) {
       return NextResponse.json(
         {
           success: false,
@@ -191,30 +383,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate side
-    const side = tactical.side.toUpperCase();
-    if (side !== "CT" && side !== "T") {
+    const repairedTactical = repairTacticalCallouts(tactical);
+    if (!repairedTactical) {
       return NextResponse.json(
-        { success: false, error: `Invalid side: ${tactical.side}. Must be CT or T.` },
+        { success: false, error: "No valid tactical callouts to render" },
         { status: 400 }
       );
     }
 
-    // Validate callout names
-    const validation = validateTacticalCallouts(tactical);
+    if (!validMapNames.includes(repairedTactical.map)) {
+      return NextResponse.json(
+        { success: false, error: `Unknown repaired map: ${repairedTactical.map}` },
+        { status: 400 }
+      );
+    }
+
+    // Validate repaired callout names. Repair runs first so aliases like "A" or
+    // "ct" do not generate noisy warnings and oversized inputs are already rejected.
+    const validation = validateTacticalCallouts(repairedTactical);
     if (!validation.valid) {
+      const preview = validation.unknown.slice(0, 10).join(", ");
       console.warn(
-        `[map-tactics] Unknown callouts in tactical data: ${validation.unknown.join(", ")}`
+        `[map-tactics] Unknown callouts in repaired tactical data (${validation.unknown.length}): ${preview}`
       );
       // Log warning but don't fail — we do our best to render
     }
-
-    // Generate SVG
-    const normalizedTactical: TacticalData = {
-      ...tactical,
-      map: tactical.map.toLowerCase(),
-      side: side as "CT" | "T",
-    };
 
     let svg: string;
 
@@ -222,21 +415,28 @@ export async function POST(request: NextRequest) {
     const renderFn = await getMapRenderer();
     if (renderFn) {
       try {
-        const rendererOpts = toRendererOptions(normalizedTactical);
+        const rendererOpts = toRendererOptions(repairedTactical);
         svg = await renderFn(rendererOpts);
       } catch (renderError) {
         console.warn("[map-tactics] Renderer failed, using fallback:", renderError);
-        svg = generateFallbackSVG(normalizedTactical);
+        svg = generateFallbackSVG(repairedTactical);
       }
     } else {
       // Fallback SVG generation
-      svg = generateFallbackSVG(normalizedTactical);
+      svg = generateFallbackSVG(repairedTactical);
     }
 
     // Save SVG to disk
     ensureOutputDir();
     const timestamp = Date.now();
-    const filename = `${normalizedTactical.map}-${timestamp}.svg`;
+    const safeMapName = repairedTactical.map.replace(/[^a-z0-9]/g, "");
+    if (!safeMapName) {
+      return NextResponse.json(
+        { success: false, error: "Invalid map name for generated file" },
+        { status: 400 }
+      );
+    }
+    const filename = `${safeMapName}-${timestamp}.svg`;
     const filePath = path.join(OUTPUT_DIR, filename);
     fs.writeFileSync(filePath, svg, "utf-8");
 
@@ -245,7 +445,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       svgUrl,
-      mapData: normalizedTactical,
+      mapData: repairedTactical,
     });
   } catch (error) {
     console.error("[map-tactics] Error:", error);

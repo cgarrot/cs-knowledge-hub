@@ -430,6 +430,13 @@ export async function POST(request: NextRequest) {
       async start(controller) {
         try {
           // Stream LLM response — NO early default map, we wait for the real data
+
+          // Send mapPending event so frontend shows skeleton immediately
+          if (detectedMap) {
+            const pendingData = JSON.stringify({ mapPending: detectedMap });
+            controller.enqueue(encoder.encode(`data: ${pendingData}\n\n`));
+          }
+
           for await (const chunk of streamChat(llmMessages)) {
             if (closed) return;
             fullResponse += chunk;

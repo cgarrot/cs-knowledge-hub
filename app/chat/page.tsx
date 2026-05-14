@@ -23,6 +23,7 @@ interface Message {
   role: "user" | "assistant";
   content: string;
   mapImage?: MapImageData | null;
+  mapPending?: string | null; // map name while generating
 }
 
 function looksLikeTacticalJson(value: string): boolean {
@@ -285,6 +286,20 @@ function ChatContent() {
                   return updated;
                 });
               }
+              // Detect map pending (skeleton) event
+              if (parsed.mapPending) {
+                const pendingMap = parsed.mapPending as string;
+                console.log("[chat] Map pending, showing skeleton for:", pendingMap);
+                setMessages((prev) => {
+                  const updated = [...prev];
+                  const last = updated[updated.length - 1];
+                  updated[updated.length - 1] = {
+                    ...last,
+                    mapPending: pendingMap,
+                  };
+                  return updated;
+                });
+              }
               // Detect tactical map image event
               if (parsed.mapImage) {
                 console.log("[chat] Received mapImage event:", parsed.mapImage);
@@ -295,6 +310,7 @@ function ChatContent() {
                   updated[updated.length - 1] = {
                     ...last,
                     mapImage: mapImg,
+                    mapPending: null, // clear skeleton
                   };
                   return updated;
                 });
@@ -376,6 +392,39 @@ function ChatContent() {
                 )}
               </div>
             </div>
+            {/* Map skeleton while generating */}
+            {msg.role === "assistant" && msg.mapPending && !msg.mapImage && (
+              <div className="-mx-4 md:mx-0 w-[calc(100%+2rem)] md:w-full mt-2">
+                <div className="tm-wrapper">
+                  <div className="tm-toolbar">
+                    <span className="text-xs font-bold uppercase tracking-wider text-accent-purple/70">
+                      🗺️ {msg.mapPending.toUpperCase()} — Generating tactical map…
+                    </span>
+                  </div>
+                  <div className="tm-svg-container" style={{ aspectRatio: "1/1", background: "#0d1117" }}>
+                    {/* Grid skeleton */}
+                    <svg width="100%" height="100%" viewBox="0 0 1280 1280" style={{ opacity: 0.15 }}>
+                      {Array.from({ length: 17 }).map((_, i) => (
+                        <line key={`h${i}`} x1="0" y1={i * 80} x2="1280" y2={i * 80} stroke="#DE9B35" strokeWidth="1" />
+                      ))}
+                      {Array.from({ length: 17 }).map((_, i) => (
+                        <line key={`v${i}`} x1={i * 80} y1="0" x2={i * 80} y2="1280" stroke="#DE9B35" strokeWidth="1" />
+                      ))}
+                      <circle cx="640" cy="640" r="60" fill="none" stroke="#DE9B35" strokeWidth="2" strokeDasharray="8 4" />
+                      <line x1="620" y1="640" x2="660" y2="640" stroke="#DE9B35" strokeWidth="2" />
+                      <line x1="640" y1="620" x2="640" y2="660" stroke="#DE9B35" strokeWidth="2" />
+                    </svg>
+                    {/* Pulsing overlay */}
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="flex items-center gap-3 px-5 py-3 rounded-xl bg-black/60 backdrop-blur-sm border border-accent-purple/30">
+                        <div className="w-5 h-5 border-2 border-accent-purple/60 border-t-accent-purple rounded-full animate-spin" />
+                        <span className="text-sm font-semibold text-gray-300">Generating map…</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
             {/* Map on its own row, full-width on mobile */}
             {msg.role === "assistant" && msg.mapImage && (
               <div className="-mx-4 md:mx-0 w-[calc(100%+2rem)] md:w-full mt-2">

@@ -104,6 +104,12 @@ const SCALE = 1.024;
 /** Base map SVG dimensions. */
 const MAP_SIZE = 1024;
 
+/** Padding added around the map so scaled annotations (callouts, arrows) are not clipped. */
+const MAP_PAD = 80;
+
+/** Effective viewBox size (map + padding on all sides). */
+const VIEW_SIZE = MAP_SIZE + MAP_PAD * 2;
+
 /** Annotation scale relative to the base radar image. */
 const ANNOTATION_SCALE = 1.65;
 const PHASE_CAP = 8;
@@ -708,14 +714,15 @@ export function renderTacticalMap(options: TacticalMapOptions): string {
   }
 
   // -- Compose final SVG --
-  // Keep the base radar and annotation coordinates in the same 1024x1024
-  // viewBox. Only marker/font/stroke dimensions are scaled by ANNOTATION_SCALE,
-  // so tactical callouts are more readable without zooming the whole map.
+  // The viewBox is expanded by MAP_PAD on all sides so scaled annotations
+  // (callouts, arrows, legend) are never clipped at the edges.
   const finalSvg = `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${MAP_SIZE} ${MAP_SIZE}" width="${MAP_SIZE}" height="${MAP_SIZE}" role="img">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="${-MAP_PAD} ${-MAP_PAD} ${VIEW_SIZE} ${VIEW_SIZE}" width="${VIEW_SIZE}" height="${VIEW_SIZE}" role="img">
   <title>Tactical Map: ${escXml(options.title || mapName)}</title>
+  <g transform="translate(${MAP_PAD}, ${MAP_PAD})">
   ${innerContent}
   ${overlays.join("\n")}
+  </g>
 </svg>`;
 
   return finalSvg;

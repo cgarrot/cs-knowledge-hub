@@ -3,7 +3,7 @@ import { buildRAGPrompt, streamChat, type ChatMessage } from "@/lib/llm";
 import { getDb } from "@/lib/db";
 import {
   detectMapMention,
-  parseTacticalJSON,
+  extractTacticalWithLLM,
   extractTacticalFromText,
   getDefaultTactical,
   toRendererOptions,
@@ -214,11 +214,17 @@ export async function POST(request: NextRequest) {
             // After streaming, extract tactical data from the LLM response and generate map
             let finalMapImage: { url: string; map: string } | undefined;
             try {
-              let tactical = parseTacticalJSON(fullResponse);
+              let tactical: TacticalData | null = null;
 
-              // FALLBACK 1: Extract from free text
+              // STAGE 1: LLM-based extraction (most reliable)
+              if (detectedMap) {
+                console.log(`[chat] Attempting LLM extraction for map: ${detectedMap}`);
+                tactical = await extractTacticalWithLLM(fullResponse, detectedMap);
+              }
+
+              // FALLBACK 1: Text extraction via regex
               if (!tactical && detectedMap) {
-                console.log(`[chat] No tactical JSON found, trying text extraction for map: ${detectedMap}`);
+                console.log(`[chat] LLM extraction failed, trying text extraction for map: ${detectedMap}`);
                 const extracted = extractTacticalFromText(fullResponse, detectedMap);
                 if (extracted) {
                   console.log(`[chat] Text extraction succeeded: ${extracted.players.length} players`);
@@ -228,6 +234,7 @@ export async function POST(request: NextRequest) {
 
               // FALLBACK 2: Deterministic defaults
               if (!tactical && detectedMap) {
+                console.log(`[chat] Text extraction failed, using defaults for map: ${detectedMap}`);
                 tactical = getDefaultTactical(detectedMap, fullResponse);
               }
 

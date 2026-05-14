@@ -6,7 +6,6 @@
 import {
   detectMapMention,
   getMapContext,
-  TACTICAL_PROMPT_INSTRUCTION,
 } from "./map-detection";
 
 const LLM_BASE_URL =
@@ -58,10 +57,8 @@ export function buildRAGPrompt(context: string, userMessage?: string): string {
     if (mapName) {
       const mapCtx = getMapContext(mapName);
       mapSection = `
-
-${mapCtx}
-
-${TACTICAL_PROMPT_INSTRUCTION}`;
+ 
+${mapCtx}`;
     }
   }
 
@@ -79,7 +76,7 @@ RULES:
 - If the context doesn't cover the topic well, supplement with your CS2 knowledge and say so briefly
 - Keep it focused — answer the question, don't dump everything you know
 - Use emojis sparingly for visual structure (🎯, 💡, ⚠️)
-${mapSection ? `\nMAP CONTEXT AND TACTICAL INSTRUCTIONS:\nWhen the user asks about a specific map, reference the map data provided below.\nYou MUST include a \`\`\`tactical JSON block at the END of your response — this generates a visual map diagram.\nDo NOT skip this step. The user expects to see a tactical map with player positions, utility, and arrows.\n` : ""}
+${mapSection ? `\nMAP CONTEXT:\nWhen the user asks about a specific map, reference the map data provided below to use the correct callout names in your answer.\n` : ""}
 KNOWLEDGE BASE CONTEXT (synthesized from pro player guides and demo analyses):
 ---
 ${cleanedContext}

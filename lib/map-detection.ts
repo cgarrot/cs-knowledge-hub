@@ -668,6 +668,123 @@ export function getDefaultTactical(
   };
 }
 
+/**
+ * Extract tactical data from the chat response using a second focused LLM call.
+ * This is the primary extraction method in the two-stage approach:
+ *   Stage 1: Chat LLM responds naturally (no tactical JSON)
+ *   Stage 2: This function analyzes the response and extracts structured tactical data
+ *
+ * Falls back to extractTacticalFromText() / getDefaultTactical() if the LLM call fails.
+ */
+export async function extractTacticalWithLLM(
+  chatResponse: string,
+  mapName: string
+): Promise<TacticalData | null> {
+  const data = loadMapData(mapName);
+  if (!data || data.callouts.length === 0) return null;
+
+  const calloutNames = data.callouts.map((c) => c.name).join(", ");
+
+  const extractionPrompt = `You are a tactical CS2 map data extractor. Analyze the following CS2 coaching advice and extract structured tactical data from it.
+
+COACHING RESPONSE TO ANALYZE:
+${chatResponse.substring(0, 4000)}
+
+MAP: ${data.displayName} (${data.name})
+VALID CALLOUTS: ${calloutNames}
+
+Return ONLY valid JSON with this exact structure (no markdown, no explanation):
+{
+  "map": "${mapName}",
+  "side": "CT or T",
+  "strategy": "brief strategy name",
+  "players": [
+    {"position": "callout_name", "role": "entry|support|awp|igl|lurk", "team": "CT or T"}
+  ],
+  "utility": [
+    {"type": "smoke|flash|molotov|he", "from": "callout", "to": "callout", "description": "what it does"}
+  ],
+  "arrows": [
+    {"from": "callout", "to": "callout", "type": "movement|utility|rotation"}
+  ]
+}
+
+RULES:
+- Use ONLY callout names from the VALID CALLOUTS list above
+- Include up to 5 players (fewer if the text doesn't describe all 5 positions)
+- Detect the side (CT or T) from the coaching advice context
+- If no tactical information can be extracted at all, return: {"map": "${mapName}", "side": "T", "strategy": "", "players": [], "utility": [], "arrows": []}
+- The JSON must be valid and parsable — no trailing commas`;
+
+  try {
+    const LLM_BASE_URL = process.env.LLM_BASE_URL || "https://api.deepseek.com/v1";
+    const LLM_API_KEY = process.env.LLM_API_KEY || process.env.OLLAMA_API_KEY || "";
+    const LLM_MODEL = process.env.LLM_MODEL || "deepseek-chat";
+
+    const llmResponse = await fetch(`${LLM_BASE_URL}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${LLM_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: LLM_MODEL,
+        messages: [
+          {
+            role: "system",
+            content:
+              "You are a precise data extraction assistant. Extract structured data from text and output only valid JSON.",
+          },
+          { role: "user", content: extractionPrompt },
+        ],
+        temperature: 0.1,
+        max_tokens: 2048,
+      }),
+    });
+
+    if (!llmResponse.ok) {
+      console.warn(
+        `[map-detection] LLM extraction API error: ${llmResponse.status}`
+      );
+      return null;
+    }
+
+    const result = await llmResponse.json();
+    const content = result.choices?.[0]?.message?.content;
+    if (!content) return null;
+
+    const cleaned = cleanJSONResponse(content);
+    const parsed = tryParseTactical(cleaned);
+    if (parsed) {
+      console.log(
+        `[map-detection] LLM extraction succeeded: ${parsed.players.length} players, ${parsed.utility.length} utility`
+      );
+      return parsed;
+    }
+
+    return null;
+  } catch (error) {
+    console.error("[map-detection] Error in extractTacticalWithLLM:", error);
+    return null;
+  }
+}
+
+function cleanJSONResponse(text: string): string {
+  let cleaned = text.trim();
+  if (cleaned.startsWith("```")) {
+    const firstNewline = cleaned.indexOf("\n");
+    if (firstNewline > -1) {
+      cleaned = cleaned.slice(firstNewline + 1);
+    } else {
+      cleaned = cleaned.slice(3);
+    }
+    if (cleaned.endsWith("```")) {
+      cleaned = cleaned.slice(0, -3);
+    }
+  }
+  return cleaned.trim();
+}
+
 // ---------------------------------------------------------------------------
 // Helper functions for text extraction
 // ---------------------------------------------------------------------------

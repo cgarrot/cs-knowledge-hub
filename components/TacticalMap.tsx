@@ -44,6 +44,7 @@ const UTILITY_TYPE_MAP: Record<string, string> = {
   H: "HE Grenade",
 };
 
+const BASE_SCALE = 1.25;
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 4;
 const ZOOM_STEP = 0.25;
@@ -303,6 +304,19 @@ export default function TacticalMap({ svgUrl, mapName, onClose }: TacticalMapPro
     svgEl.setAttribute("height", "100%");
     svgEl.style.display = "block";
 
+    // Fix: make the DISPLAY_SCALE 1.25 from map-renderer actually visible.
+    // The renderer outputs viewBox="0 0 1280 1280" + <g transform="scale(1.25)">
+    // which cancels out visually. We change viewBox to "0 0 1024 1024" and
+    // remove the internal scale — the component applies a CSS base scale instead.
+    const vb = svgEl.getAttribute("viewBox") || "";
+    if (vb === "0 0 1280 1280") {
+      svgEl.setAttribute("viewBox", "0 0 1024 1024");
+    }
+    const g = svgEl.querySelector("g");
+    if (g && g.getAttribute("transform") === "scale(1.25)") {
+      g.removeAttribute("transform");
+    }
+
     annotateSvg(svgEl);
   }, [svgContent]);
 
@@ -316,18 +330,19 @@ export default function TacticalMap({ svgUrl, mapName, onClose }: TacticalMapPro
 
   /* ── Clamp pan to keep SVG visible ─────────────────────────────────── */
   const clampPan = useCallback((p: { x: number; y: number }, z: number, containerW: number, containerH: number) => {
-    if (z <= 1) return { x: 0, y: 0 };
-    const scaledW = containerW * z;
-    const scaledH = containerH * z;
-    const maxPanX = (scaledW - containerW) / 2;
-    const maxPanY = (scaledH - containerH) / 2;
+    const effectiveZ = z * BASE_SCALE;
+    if (effectiveZ <= 1) return { x: 0, y: 0 };
+    const scaledW = containerW * effectiveZ;
+    const scaledH = containerH * effectiveZ;
+    // With transform-origin: 0 0, content expands right/down when scaled.
+    // Valid range: x in [-(scaledW - containerW), 0], y in [-(scaledH - containerH), 0]
     return {
-      x: Math.max(-maxPanX, Math.min(maxPanX, p.x)),
-      y: Math.max(-maxPanY, Math.min(maxPanY, p.y)),
+      x: Math.max(-(scaledW - containerW), Math.min(0, p.x)),
+      y: Math.max(-(scaledH - containerH), Math.min(0, p.y)),
     };
   }, []);
 
-  /* ── Wheel zoom (centered) ─────────────────────────────────────────── */
+  /* ── Wheel zoom (centered on cursor) ───────────────────────────────── */
   const handleWheel = useCallback(
     (e: React.WheelEvent) => {
       e.preventDefault();
@@ -339,20 +354,16 @@ export default function TacticalMap({ svgUrl, mapName, onClose }: TacticalMapPro
       // Mouse position relative to container
       const mx = e.clientX - rect.left;
       const my = e.clientY - rect.top;
-      // Normalize to 0-1
-      const nx = mx / rect.width;
-      const ny = my / rect.height;
 
-      // Adjust pan so zoom centers on mouse position
-      const oldZoom = zoomRef.current;
-      const scaleFactor = newZoom / oldZoom;
+      // Zoom centered on cursor: keep the content point under the cursor fixed
+      const ratio = newZoom / zoomRef.current;
       const newPan = {
-        x: (panRef.current.x - mx * (scaleFactor - 1)) * (newZoom > 1 ? 1 : 0),
-        y: (panRef.current.y - my * (scaleFactor - 1)) * (newZoom > 1 ? 1 : 0),
+        x: panRef.current.x * ratio + mx * (1 - ratio),
+        y: panRef.current.y * ratio + my * (1 - ratio),
       };
 
       setZoom(newZoom);
-      setPan(newZoom > 1 ? clampPan(newPan, newZoom, rect.width, rect.height) : { x: 0, y: 0 });
+      setPan(clampPan(newPan, newZoom, rect.width, rect.height));
     },
     [clampPan]
   );
@@ -361,7 +372,6 @@ export default function TacticalMap({ svgUrl, mapName, onClose }: TacticalMapPro
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
       if (e.button !== 0) return;
-      if (zoomRef.current <= 1) return;
       e.preventDefault();
       isDragging.current = true;
       dragStart.current = { x: e.clientX, y: e.clientY };
@@ -392,7 +402,7 @@ export default function TacticalMap({ svgUrl, mapName, onClose }: TacticalMapPro
     if (isDragging.current) {
       isDragging.current = false;
       if (svgRef.current)
-        svgRef.current.style.cursor = zoomRef.current > 1 ? "grab" : "default";
+        svgRef.current.style.cursor = "grab";
     }
   }, []);
 
@@ -450,7 +460,10 @@ export default function TacticalMap({ svgUrl, mapName, onClose }: TacticalMapPro
     (e: React.TouchEvent) => {
       if (e.touches.length === 2) {
         lastTouchDist.current = getTouchDistance(e.touches);
-      } else if (e.touches.length === 1 && zoomRef.current > 1) {
+        const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        const cy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+        lastTouchCenter.current = { x: cx, y: cy };
+      } else if (e.touches.length === 1) {
         isDragging.current = true;
         dragStart.current = {
           x: e.touches[0].clientX,
@@ -467,10 +480,29 @@ export default function TacticalMap({ svgUrl, mapName, onClose }: TacticalMapPro
       if (e.touches.length === 2) {
         e.preventDefault();
         const newDist = getTouchDistance(e.touches);
-        const scale = newDist / (lastTouchDist.current || 1);
+        const ratio = newDist / (lastTouchDist.current || 1);
         lastTouchDist.current = newDist;
-        setZoom((prev) =>
-          Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, prev * scale))
+
+        const rect = svgRef.current?.getBoundingClientRect();
+        if (!rect) return;
+
+        // Midpoint of pinch in container coordinates
+        const mx = lastTouchCenter.current.x - rect.left;
+        const my = lastTouchCenter.current.y - rect.top;
+
+        const currentZoom = zoomRef.current;
+        const newZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, currentZoom * ratio));
+        if (newZoom === currentZoom) return;
+        const effectiveRatio = newZoom / currentZoom;
+        const currentPan = panRef.current;
+        setZoom(newZoom);
+        setPan(
+          clampPan(
+            { x: currentPan.x * effectiveRatio + mx * (1 - effectiveRatio), y: currentPan.y * effectiveRatio + my * (1 - effectiveRatio) },
+            newZoom,
+            rect.width,
+            rect.height
+          )
         );
       } else if (e.touches.length === 1 && isDragging.current) {
         e.preventDefault();
@@ -496,12 +528,10 @@ export default function TacticalMap({ svgUrl, mapName, onClose }: TacticalMapPro
   const zoomIn = () => {
     const newZoom = Math.min(MAX_ZOOM, zoom + ZOOM_STEP);
     setZoom(newZoom);
-    if (newZoom <= 1) setPan({ x: 0, y: 0 });
   };
   const zoomOut = () => {
     const newZoom = Math.max(MIN_ZOOM, zoom - ZOOM_STEP);
     setZoom(newZoom);
-    if (newZoom <= 1) setPan({ x: 0, y: 0 });
   };
   const resetView = () => {
     setZoom(1);
@@ -524,10 +554,9 @@ export default function TacticalMap({ svgUrl, mapName, onClose }: TacticalMapPro
   }, [isFullscreen]);
 
   /* ── Render ────────────────────────────────────────────────────────── */
-  // Transform: scale from center of container, then translate
-  const transform = zoom > 1
-    ? `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`
-    : "scale(1)";
+  // Transform with base scale so DISPLAY_SCALE=1.25 is actually visible
+  const effectiveZoom = zoom * BASE_SCALE;
+  const transform = `translate(${pan.x}px, ${pan.y}px) scale(${effectiveZoom})`;
 
   const layerBtn = (
     label: string,
@@ -570,7 +599,7 @@ export default function TacticalMap({ svgUrl, mapName, onClose }: TacticalMapPro
         >
           −
         </button>
-        <span className="tm-zoom-label">{Math.round(zoom * 100)}%</span>
+        <span className="tm-zoom-label">{Math.round(effectiveZoom * 100)}%</span>
         <button
           onClick={zoomIn}
           disabled={zoom >= MAX_ZOOM}
@@ -629,7 +658,7 @@ export default function TacticalMap({ svgUrl, mapName, onClose }: TacticalMapPro
           ref={svgRef}
           className={`tm-svg-container ${isFullscreen ? "tm-svg-fullscreen" : ""}`}
           style={{
-            cursor: zoom > 1 ? (isDragging.current ? "grabbing" : "grab") : "default",
+            cursor: isDragging.current ? "grabbing" : "grab",
           }}
           onWheel={handleWheel}
           onMouseDown={handleMouseDown}

@@ -110,10 +110,10 @@ export function detectMapMention(message: string): string | null {
 
   // Special aliases for maps with spaces/alternate names
   const aliases: Record<string, string[]> = {
-    dust2: ["dust2", "dust 2", "de_dust2", "de dust2", "dust_2"],
+    dust2: ["dust2", "dust 2", "de_dust2", "de dust2", "dust_2", "d2"],
     mirage: ["mirage", "de_mirage"],
     inferno: ["inferno", "de_inferno"],
-    ancient: ["ancient", "de_ancient"],
+    ancient: ["ancient", "de_ancient", "acient", "ancien"],
     anubis: ["anubis", "de_anubis"],
     nuke: ["nuke", "de_nuke"],
     overpass: ["overpass", "de_overpass"],

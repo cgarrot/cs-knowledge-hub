@@ -18,7 +18,13 @@ interface Message {
   mapImage?: MapImageData | null;
 }
 
+function stripTacticalJson(content: string): string {
+  // Remove ```tactical ... ``` blocks from markdown before rendering
+  return content.replace(/```tactical\s*\n[\s\S]*?```/gi, "").trim();
+}
+
 function MarkdownRenderer({ content }: { content: string }) {
+  const cleaned = stripTacticalJson(content);
   return (
     <div className="markdown-body text-sm leading-relaxed">
       <ReactMarkdown
@@ -103,7 +109,7 @@ function MarkdownRenderer({ content }: { content: string }) {
           ),
         }}
       >
-        {content}
+        {cleaned}
       </ReactMarkdown>
     </div>
   );
@@ -249,7 +255,7 @@ function ChatContent() {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4">
+      <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4 md:px-6">
         {messages.map((msg, i) => (
           <div
             key={i}
@@ -267,17 +273,20 @@ function ChatContent() {
               ) : msg.content ? (
                 <>
                   <MarkdownRenderer content={msg.content} />
-                  {msg.mapImage && (
-                    <TacticalMap
-                      svgUrl={msg.mapImage.url}
-                      mapName={msg.mapImage.map}
-                    />
-                  )}
                 </>
               ) : (
                 <span className="animate-pulse text-gray-500">Thinking...</span>
               )}
             </div>
+            {/* Map displayed OUTSIDE the chat bubble for full-width on mobile */}
+            {msg.role === "assistant" && msg.mapImage && (
+              <div className="-mx-4 md:mx-0 w-[calc(100%+2rem)] md:w-full">
+                <TacticalMap
+                  svgUrl={msg.mapImage.url}
+                  mapName={msg.mapImage.map}
+                />
+              </div>
+            )}
           </div>
         ))}
         <div ref={messagesEndRef} />

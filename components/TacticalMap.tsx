@@ -251,6 +251,7 @@ const STYLES = {
     overflow: "hidden",
     marginTop: "8px",
     fontFamily: "sans-serif",
+    width: "100%",
   },
   wrapperFullscreen: {
     position: "fixed" as const,
@@ -286,6 +287,7 @@ const STYLES = {
     lineHeight: "18px",
     transition: "all 0.15s ease",
     userSelect: "none" as const,
+    touchAction: "manipulation",
   },
   toolbarBtnActive: {
     background: "rgba(124,77,255,0.3)",
@@ -313,6 +315,7 @@ const STYLES = {
     flex: 1,
   },
   svgContainer: {
+    height: "50vh",
     maxHeight: "400px",
     overflow: "hidden",
     cursor: "grab",
@@ -321,8 +324,8 @@ const STYLES = {
     touchAction: "none",
   },
   svgContainerFullscreen: {
-    maxHeight: "none",
     height: "calc(100vh - 42px)",
+    maxHeight: "none",
   },
   svgInner: {
     transformOrigin: "0 0",
@@ -660,6 +663,7 @@ export default function TacticalMap({ svgUrl, mapName, onClose }: TacticalMapPro
   return (
     <div
       ref={containerRef}
+      className="tactical-map-wrapper"
       style={{
         ...STYLES.wrapper,
         ...(isFullscreen ? STYLES.wrapperFullscreen : {}),
@@ -667,8 +671,8 @@ export default function TacticalMap({ svgUrl, mapName, onClose }: TacticalMapPro
       }}
     >
       {/* ── Toolbar ──────────────────────────────────────────────── */}
-      <div style={STYLES.toolbar}>
-        <span style={STYLES.mapTitle}>
+      <div className="tactical-map-toolbar" style={STYLES.toolbar}>
+        <span className="tactical-map-title" style={STYLES.mapTitle}>
           {mapName} Tactical Map
         </span>
 
@@ -748,6 +752,7 @@ export default function TacticalMap({ svgUrl, mapName, onClose }: TacticalMapPro
       ) : (
         <div
           ref={svgRef}
+          className="tactical-map-svg-container"
           style={{
             ...STYLES.svgContainer,
             ...(isFullscreen ? STYLES.svgContainerFullscreen : {}),

@@ -26,6 +26,13 @@ interface Message {
   mapPending?: string | null; // map name while generating
 }
 
+/** Edge-to-edge within the scroll area vs. message list px-4 / md:px-6 padding */
+const tacticalMapBreakoutRow =
+  "w-[calc(100%+2rem)] -mx-4 shrink-0 md:w-[calc(100%+3rem)] md:-mx-6";
+
+const tacticalMapFrame =
+  "rounded-xl overflow-hidden bg-[#050709]/50 shadow-[0_16px_48px_rgba(0,0,0,0.42)] ring-1 ring-accent-purple/28 [&_.tm-wrapper]:mt-0";
+
 function looksLikeTacticalJson(value: string): boolean {
   const lower = value.toLowerCase();
   return (
@@ -373,8 +380,59 @@ function ChatContent() {
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4 md:px-6 bg-gradient-to-b from-transparent to-[#080b0f]/80">
-        {messages.map((msg, i) => (
-          <div key={i}>
+        {messages.map((msg, i) => {
+          const showTacticalStripe =
+            msg.role === "assistant" && !!(msg.mapImage || msg.mapPending);
+          const rootClass = showTacticalStripe ? "flex flex-col gap-4" : "";
+
+          return (
+          <div key={i} className={rootClass}>
+            {/* Full-width tactical stripe above the reply when a map is pending or ready */}
+            {msg.role === "assistant" && msg.mapPending && !msg.mapImage && (
+              <div className={tacticalMapBreakoutRow}>
+                <div className={tacticalMapFrame}>
+                  <div className="tm-wrapper">
+                    <div className="tm-toolbar">
+                      <span className="text-xs font-bold uppercase tracking-wider text-accent-purple/70">
+                        🗺️ {msg.mapPending.toUpperCase()} — Generating tactical map…
+                      </span>
+                    </div>
+                    <div className="tm-svg-container" style={{ aspectRatio: "1/1", background: "#0d1117" }}>
+                      {/* Grid skeleton */}
+                      <svg width="100%" height="100%" viewBox="0 0 1280 1280" style={{ opacity: 0.15 }}>
+                        {Array.from({ length: 17 }).map((_, j) => (
+                          <line key={`h${j}`} x1="0" y1={j * 80} x2="1280" y2={j * 80} stroke="#DE9B35" strokeWidth="1" />
+                        ))}
+                        {Array.from({ length: 17 }).map((_, j) => (
+                          <line key={`v${j}`} x1={j * 80} y1="0" x2={j * 80} y2="1280" stroke="#DE9B35" strokeWidth="1" />
+                        ))}
+                        <circle cx="640" cy="640" r="60" fill="none" stroke="#DE9B35" strokeWidth="2" strokeDasharray="8 4" />
+                        <line x1="620" y1="640" x2="660" y2="640" stroke="#DE9B35" strokeWidth="2" />
+                        <line x1="640" y1="620" x2="640" y2="660" stroke="#DE9B35" strokeWidth="2" />
+                      </svg>
+                      {/* Pulsing overlay */}
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="flex items-center gap-3 px-5 py-3 rounded-xl bg-black/60 backdrop-blur-sm border border-accent-purple/30">
+                          <div className="w-5 h-5 border-2 border-accent-purple/60 border-t-accent-purple rounded-full animate-spin" />
+                          <span className="text-sm font-semibold text-gray-300">Generating map…</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            {msg.role === "assistant" && msg.mapImage && (
+              <div className={tacticalMapBreakoutRow}>
+                <div className={tacticalMapFrame}>
+                  <TacticalMap
+                    svgUrl={msg.mapImage.url}
+                    mapName={msg.mapImage.map}
+                    phases={msg.mapImage.phases}
+                  />
+                </div>
+              </div>
+            )}
             <div
               className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
             >
@@ -394,51 +452,9 @@ function ChatContent() {
                 )}
               </div>
             </div>
-            {/* Map skeleton while generating */}
-            {msg.role === "assistant" && msg.mapPending && !msg.mapImage && (
-              <div className="-mx-4 md:mx-0 w-[calc(100%+2rem)] md:w-1/3 mt-2">
-                <div className="tm-wrapper">
-                  <div className="tm-toolbar">
-                    <span className="text-xs font-bold uppercase tracking-wider text-accent-purple/70">
-                      🗺️ {msg.mapPending.toUpperCase()} — Generating tactical map…
-                    </span>
-                  </div>
-                  <div className="tm-svg-container" style={{ aspectRatio: "1/1", background: "#0d1117" }}>
-                    {/* Grid skeleton */}
-                    <svg width="100%" height="100%" viewBox="0 0 1280 1280" style={{ opacity: 0.15 }}>
-                      {Array.from({ length: 17 }).map((_, i) => (
-                        <line key={`h${i}`} x1="0" y1={i * 80} x2="1280" y2={i * 80} stroke="#DE9B35" strokeWidth="1" />
-                      ))}
-                      {Array.from({ length: 17 }).map((_, i) => (
-                        <line key={`v${i}`} x1={i * 80} y1="0" x2={i * 80} y2="1280" stroke="#DE9B35" strokeWidth="1" />
-                      ))}
-                      <circle cx="640" cy="640" r="60" fill="none" stroke="#DE9B35" strokeWidth="2" strokeDasharray="8 4" />
-                      <line x1="620" y1="640" x2="660" y2="640" stroke="#DE9B35" strokeWidth="2" />
-                      <line x1="640" y1="620" x2="640" y2="660" stroke="#DE9B35" strokeWidth="2" />
-                    </svg>
-                    {/* Pulsing overlay */}
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="flex items-center gap-3 px-5 py-3 rounded-xl bg-black/60 backdrop-blur-sm border border-accent-purple/30">
-                        <div className="w-5 h-5 border-2 border-accent-purple/60 border-t-accent-purple rounded-full animate-spin" />
-                        <span className="text-sm font-semibold text-gray-300">Generating map…</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-            {/* Map on its own row, full-width on mobile, 1/3 on desktop */}
-            {msg.role === "assistant" && msg.mapImage && (
-              <div className="-mx-4 md:mx-0 w-[calc(100%+2rem)] md:w-1/3 mt-2">
-                <TacticalMap
-                  svgUrl={msg.mapImage.url}
-                  mapName={msg.mapImage.map}
-                  phases={msg.mapImage.phases}
-                />
-              </div>
-            )}
           </div>
-        ))}
+          );
+        })}
         <div ref={messagesEndRef} />
       </div>
 

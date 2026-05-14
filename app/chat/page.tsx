@@ -394,7 +394,7 @@ function ChatContent() {
             </div>
             {/* Map skeleton while generating */}
             {msg.role === "assistant" && msg.mapPending && !msg.mapImage && (
-              <div className="-mx-4 md:mx-0 w-[calc(100%+2rem)] md:w-full mt-2">
+              <div className="-mx-4 md:mx-0 w-[calc(100%+2rem)] md:w-1/3 mt-2">
                 <div className="tm-wrapper">
                   <div className="tm-toolbar">
                     <span className="text-xs font-bold uppercase tracking-wider text-accent-purple/70">
@@ -425,9 +425,9 @@ function ChatContent() {
                 </div>
               </div>
             )}
-            {/* Map on its own row, full-width on mobile */}
+            {/* Map on its own row, full-width on mobile, 1/3 on desktop */}
             {msg.role === "assistant" && msg.mapImage && (
-              <div className="-mx-4 md:mx-0 w-[calc(100%+2rem)] md:w-full mt-2">
+              <div className="-mx-4 md:mx-0 w-[calc(100%+2rem)] md:w-1/3 mt-2">
                 <TacticalMap
                   svgUrl={msg.mapImage.url}
                   mapName={msg.mapImage.map}

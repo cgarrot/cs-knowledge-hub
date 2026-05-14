@@ -13,11 +13,11 @@ import {
   toRendererOptions,
   MAP_NAMES,
 } from "@/lib/map-detection";
+import { writeGeneratedMapSvg } from "@/lib/generated-maps";
+import { readLimitedRequestText } from "@/lib/request-body";
 
 export const runtime = "nodejs";
 
-// Ensure the output directory exists
-const OUTPUT_DIR = path.join(process.cwd(), "public", "generated-maps");
 const MAX_REQUEST_CHARS = 50_000;
 const MAX_FIELD_CHARS = 500;
 const MAX_PLAYERS = 20;
@@ -127,6 +127,7 @@ function normalizeTacticalPayload(rawBody: string): { tactical?: TacticalData; e
         label: readString(item, "label", `tactical.players[${index}].label`, false, errors),
         timing: readString(item, "timing", `tactical.players[${index}].timing`, false, errors),
         task: readString(item, "task", `tactical.players[${index}].task`, false, errors),
+        phase: readString(item, "phase", `tactical.players[${index}].phase`, false, errors, 80),
       });
     }
   });
@@ -147,6 +148,7 @@ function normalizeTacticalPayload(rawBody: string): { tactical?: TacticalData; e
         timing: readString(item, "timing", `tactical.utility[${index}].timing`, false, errors),
         purpose: readString(item, "purpose", `tactical.utility[${index}].purpose`, false, errors),
         player: readString(item, "player", `tactical.utility[${index}].player`, false, errors),
+        phase: readString(item, "phase", `tactical.utility[${index}].phase`, false, errors, 80),
       });
     }
   });
@@ -218,10 +220,25 @@ function escSvgText(value: string): string {
     .replace(/"/g, "&quot;");
 }
 
-function ensureOutputDir() {
-  if (!fs.existsSync(OUTPUT_DIR)) {
-    fs.mkdirSync(OUTPUT_DIR, { recursive: true });
-  }
+function phaseTypeFromName(name: string): string {
+  const lower = name.toLowerCase();
+  if (/retake|reprise|defuse/.test(lower)) return "retake";
+  if (/post[-\s]?plant|after\s+plant/.test(lower)) return "post-plant";
+  if (/execute|exec|commit|pop|contact/.test(lower)) return "execute";
+  if (/map\s*control|control|default|mid[-\s]?round/.test(lower)) return "map-control";
+  if (/rotate|rotation|fallback|regroup/.test(lower)) return "rotation";
+  if (/opening|spawn|start|initial|0:00/.test(lower)) return "opening";
+  return "custom";
+}
+
+function getPhaseMetadata(tactical: TacticalData) {
+  return (tactical.phases || []).slice(0, MAX_PHASES).map((phase, index) => ({
+    index,
+    name: phase.name,
+    timing: phase.timing,
+    type: phaseTypeFromName(phase.name),
+    description: phase.description,
+  }));
 }
 
 /**
@@ -362,7 +379,19 @@ function generateFallbackSVG(tactical: TacticalData): string {
 
 export async function POST(request: NextRequest) {
   try {
-    const parsedRequest = normalizeTacticalPayload(await request.text());
+    const rawRequest = await readLimitedRequestText(
+      request,
+      MAX_REQUEST_CHARS,
+      "Tactical request body is too large"
+    );
+    if (rawRequest.error) {
+      return NextResponse.json(
+        { success: false, error: rawRequest.error },
+        { status: rawRequest.status || 400 }
+      );
+    }
+
+    const parsedRequest = normalizeTacticalPayload(rawRequest.text || "");
     if (!parsedRequest.tactical) {
       return NextResponse.json(
         { success: false, error: parsedRequest.error || "Invalid tactical data" },
@@ -426,25 +455,18 @@ export async function POST(request: NextRequest) {
       svg = generateFallbackSVG(repairedTactical);
     }
 
-    // Save SVG to disk
-    ensureOutputDir();
-    const timestamp = Date.now();
-    const safeMapName = repairedTactical.map.replace(/[^a-z0-9]/g, "");
-    if (!safeMapName) {
+    const generatedMap = writeGeneratedMapSvg(repairedTactical.map, svg);
+    if (!generatedMap) {
       return NextResponse.json(
         { success: false, error: "Invalid map name for generated file" },
         { status: 400 }
       );
     }
-    const filename = `${safeMapName}-${timestamp}.svg`;
-    const filePath = path.join(OUTPUT_DIR, filename);
-    fs.writeFileSync(filePath, svg, "utf-8");
-
-    const svgUrl = `/api/generated-maps/${filename}`;
 
     return NextResponse.json({
       success: true,
-      svgUrl,
+      svgUrl: generatedMap.url,
+      phases: getPhaseMetadata(repairedTactical),
       mapData: repairedTactical,
     });
   } catch (error) {

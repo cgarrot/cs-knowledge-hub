@@ -10,6 +10,13 @@ import TacticalMap from "@/components/TacticalMap";
 interface MapImageData {
   url: string;
   map: string;
+  phases?: Array<{
+    index: number;
+    name: string;
+    timing?: string;
+    type?: string;
+    description?: string;
+  }>;
 }
 
 interface Message {
@@ -18,9 +25,87 @@ interface Message {
   mapImage?: MapImageData | null;
 }
 
+function looksLikeTacticalJson(value: string): boolean {
+  const lower = value.toLowerCase();
+  return (
+    /"map"\s*:/.test(lower) &&
+    /"players"\s*:/.test(lower) &&
+    (/"utility"\s*:/.test(lower) || /"arrows"\s*:/.test(lower) || /"phases"\s*:/.test(lower))
+  );
+}
+
+function findBalancedJsonEnd(text: string, startIndex: number): number {
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+
+  for (let index = startIndex; index < text.length; index++) {
+    const ch = text[index];
+    if (escape) {
+      escape = false;
+      continue;
+    }
+    if (ch === "\\" && inString) {
+      escape = true;
+      continue;
+    }
+    if (ch === '"') {
+      inString = !inString;
+      continue;
+    }
+    if (inString) continue;
+    if (ch === "{") depth++;
+    if (ch === "}") {
+      depth--;
+      if (depth === 0) return index;
+    }
+  }
+
+  return -1;
+}
+
+function stripInlineTacticalJson(content: string): string {
+  let output = "";
+  let index = 0;
+
+  while (index < content.length) {
+    if (content[index] !== "{") {
+      output += content[index];
+      index++;
+      continue;
+    }
+
+    const end = findBalancedJsonEnd(content, index);
+    if (end === -1) {
+      output += content.slice(index);
+      break;
+    }
+
+    const candidate = content.slice(index, end + 1);
+    if (looksLikeTacticalJson(candidate)) {
+      index = end + 1;
+      continue;
+    }
+
+    output += candidate;
+    index = end + 1;
+  }
+
+  return output;
+}
+
 function stripTacticalJson(content: string): string {
-  // Remove ```tactical ... ``` blocks from markdown before rendering
-  return content.replace(/```tactical\s*\n[\s\S]*?```/gi, "").trim();
+  const withoutFences = content.replace(
+    /```([a-z0-9_-]*)[^\n]*\n([\s\S]*?)```/gi,
+    (match, language: string, body: string) => {
+      const lang = language.toLowerCase();
+      if (lang === "tactical") return "";
+      if ((lang === "json" || lang === "") && looksLikeTacticalJson(body)) return "";
+      return match;
+    }
+  );
+
+  return stripInlineTacticalJson(withoutFences).replace(/\n{3,}/g, "\n\n").trim();
 }
 
 function MarkdownRenderer({ content }: { content: string }) {
@@ -297,6 +382,7 @@ function ChatContent() {
                 <TacticalMap
                   svgUrl={msg.mapImage.url}
                   mapName={msg.mapImage.map}
+                  phases={msg.mapImage.phases}
                 />
               </div>
             )}

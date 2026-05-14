@@ -30,6 +30,7 @@ export interface TacticalData {
     label?: string;
     timing?: string;
     task?: string;
+    phase?: string;
   }>;
   utility: Array<{
     type: string;
@@ -39,6 +40,7 @@ export interface TacticalData {
     timing?: string;
     purpose?: string;
     player?: string;
+    phase?: string;
   }>;
   arrows: Array<{
     from: string;
@@ -78,6 +80,26 @@ const MAPS_DIR = path.join(process.cwd(), "data", "maps");
 // Cache for loaded map data to avoid repeated file reads
 const mapDataCache = new Map<string, { data: MapData; timestamp: number }>();
 const CACHE_TTL = 60_000; // 1 minute
+const MAX_PHASES = 8;
+const CANONICAL_PHASES = [
+  "Opening",
+  "Map control",
+  "Execute",
+  "Post-plant",
+  "Retake",
+  "Rotation",
+] as const;
+
+type CanonicalPhase = (typeof CANONICAL_PHASES)[number];
+
+const PHASE_TIMINGS: Record<CanonicalPhase, string> = {
+  Opening: "0:00-0:15",
+  "Map control": "0:15-0:40",
+  Execute: "0:40-0:58",
+  "Post-plant": "post-plant",
+  Retake: "retake",
+  Rotation: "mid-round",
+};
 
 /**
  * Detect if the user message mentions a CS2 map name.
@@ -365,6 +387,122 @@ function optionalString(value: unknown): string | undefined {
   return cleanString(value) || undefined;
 }
 
+function compactStrings(parts: Array<string | undefined | null>): string[] {
+  return parts.map((part) => part?.trim()).filter((part): part is string => Boolean(part));
+}
+
+function uniqueStrings(values: string[], max = 12): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const value of values) {
+    const cleaned = cleanString(value);
+    if (!cleaned) continue;
+    const key = cleaned.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(cleaned);
+    if (result.length >= max) break;
+  }
+  return result;
+}
+
+function canonicalPhaseName(value: unknown): CanonicalPhase | undefined {
+  const cleaned = cleanString(value);
+  if (!cleaned) return undefined;
+  const lower = cleaned.toLowerCase();
+
+  const exact = CANONICAL_PHASES.find((phase) => phase.toLowerCase() === lower);
+  if (exact) return exact;
+  if (/retake|reprise|re-take/.test(lower)) return "Retake";
+  if (/post[-\s]?plant|after\s+plant|après\s+plant|apres\s+plant/.test(lower)) return "Post-plant";
+  if (/execute|exec|commit|explode|go\s+signal|pop\s+flash|contact/.test(lower)) return "Execute";
+  if (/map\s*control|control|contrôle|controle|default|mid[-\s]?round|take\s+space|pressure/.test(lower)) return "Map control";
+  if (/rotate|rotation|fallback|regroup|pivot|late[-\s]?round/.test(lower)) return "Rotation";
+  if (/opening|spawn|freeze|start|début|debut|initial|first\s+contact|0:00/.test(lower)) return "Opening";
+  return undefined;
+}
+
+function phaseFromContext(parts: Array<string | undefined | null>, fallback: CanonicalPhase): CanonicalPhase {
+  return canonicalPhaseName(compactStrings(parts).join(" ")) || fallback;
+}
+
+function phaseOrder(name: string): number {
+  const canonical = canonicalPhaseName(name);
+  if (!canonical) return CANONICAL_PHASES.length + 1;
+  return CANONICAL_PHASES.indexOf(canonical);
+}
+
+function phaseDescription(name: CanonicalPhase, side: "CT" | "T"): string {
+  switch (name) {
+    case "Opening":
+      return `${side} players leave spawn into safe defaults and first contact spacing.`;
+    case "Map control":
+      return "Secure the key lanes, deny early information, and group the next wave.";
+    case "Execute":
+      return "Layer utility, entry paths, and trade spacing into the target area.";
+    case "Post-plant":
+      return "Plant, spread into crossfires, and hold the retake choke points.";
+    case "Retake":
+      return "Re-clear the site with grouped utility, trades, and defuse cover.";
+    case "Rotation":
+      return "Rotate or regroup into the fallback lane when the first pressure stalls.";
+  }
+}
+
+function makePhase(
+  name: CanonicalPhase,
+  side: "CT" | "T",
+  callouts: string[],
+  description?: string,
+  timing?: string
+): NonNullable<TacticalData["phases"]>[number] {
+  return {
+    name,
+    timing: timing || PHASE_TIMINGS[name],
+    description: description || phaseDescription(name, side),
+    callouts: uniqueStrings(callouts, 8),
+  };
+}
+
+function mergePhaseLists(
+  explicitPhases: NonNullable<TacticalData["phases"]>,
+  inferredPhases: NonNullable<TacticalData["phases"]>
+): NonNullable<TacticalData["phases"]> {
+  const merged = new Map<string, NonNullable<TacticalData["phases"]>[number]>();
+
+  const addPhase = (phase: NonNullable<TacticalData["phases"]>[number]) => {
+    const cleaned = cleanString(phase.name);
+    if (!cleaned) return;
+    const canonical = canonicalPhaseName(cleaned);
+    const name = canonical || cleaned;
+    const key = name.toLowerCase();
+    const existing = merged.get(key);
+    if (!existing) {
+      merged.set(key, {
+        name,
+        timing: optionalString(phase.timing) || (canonical ? PHASE_TIMINGS[canonical] : undefined),
+        description: optionalString(phase.description),
+        callouts: uniqueStrings(Array.isArray(phase.callouts) ? phase.callouts : [], 8),
+      });
+      return;
+    }
+
+    existing.timing = existing.timing || optionalString(phase.timing);
+    existing.description = existing.description || optionalString(phase.description);
+    existing.callouts = uniqueStrings([
+      ...(existing.callouts || []),
+      ...(Array.isArray(phase.callouts) ? phase.callouts : []),
+    ], 8);
+  };
+
+  explicitPhases.forEach(addPhase);
+  inferredPhases.forEach(addPhase);
+
+  return Array.from(merged.values())
+    .sort((a, b) => phaseOrder(a.name) - phaseOrder(b.name))
+    .slice(0, MAX_PHASES);
+}
+
 function normalizeTeam(value: unknown, fallback: "CT" | "T"): "CT" | "T" {
   const upper = cleanString(value)?.toUpperCase();
   return upper === "CT" || upper === "T" ? upper : fallback;
@@ -389,6 +527,26 @@ function defaultSpawn(side: "CT" | "T", lookup: Map<string, string>): string {
   return repairCalloutName(side === "CT" ? "CT Spawn" : "T Spawn", lookup) ||
     lookup.values().next().value ||
     (side === "CT" ? "CT Spawn" : "T Spawn");
+}
+
+function nearestCallouts(
+  data: MapData,
+  anchorName: string,
+  excluded: string[],
+  max = 3
+): string[] {
+  const anchor = data.callouts.find((callout) => callout.name.toLowerCase() === anchorName.toLowerCase());
+  if (!anchor) return [];
+  const excludedSet = new Set(excluded.map((value) => value.toLowerCase()));
+  return data.callouts
+    .filter((callout) => !excludedSet.has(callout.name.toLowerCase()))
+    .map((callout) => ({
+      name: callout.name,
+      distance: Math.hypot(callout.x - anchor.x, callout.y - anchor.y),
+    }))
+    .sort((a, b) => a.distance - b.distance)
+    .slice(0, max)
+    .map((callout) => callout.name);
 }
 
 function hasTacticalDetails(tactical: TacticalData): boolean {
@@ -419,6 +577,10 @@ export function repairTacticalCallouts(tactical: TacticalData): TacticalData | n
       label: optionalString(player?.label),
       timing: optionalString(player?.timing),
       task: optionalString(player?.task),
+      phase: phaseFromContext(
+        [optionalString(player?.phase), optionalString(player?.timing), optionalString(player?.task)],
+        "Opening"
+      ),
     });
   }
 
@@ -436,6 +598,10 @@ export function repairTacticalCallouts(tactical: TacticalData): TacticalData | n
       timing: optionalString(util?.timing),
       purpose: optionalString(util?.purpose),
       player: optionalString(util?.player),
+      phase: phaseFromContext(
+        [optionalString(util?.phase), optionalString(util?.timing), optionalString(util?.purpose), optionalString(util?.description)],
+        "Execute"
+      ),
     });
   }
 
@@ -445,29 +611,38 @@ export function repairTacticalCallouts(tactical: TacticalData): TacticalData | n
     const to = repairCalloutName(arrow?.to, lookup);
     if (!from || !to || from.toLowerCase() === to.toLowerCase()) continue;
     const rawType = cleanString(arrow?.type)?.toLowerCase();
+    const type = rawType === "utility" || rawType === "rotation" ? rawType : "movement";
     arrows.push({
       from,
       to,
-      type: rawType === "utility" || rawType === "rotation" ? rawType : "movement",
+      type,
       label: optionalString(arrow?.label),
       timing: optionalString(arrow?.timing),
-      phase: optionalString(arrow?.phase),
+      phase: phaseFromContext(
+        [optionalString(arrow?.phase), optionalString(arrow?.timing), optionalString(arrow?.label), type],
+        type === "utility" ? "Execute" : type === "rotation" ? "Rotation" : "Map control"
+      ),
     });
   }
 
-  const phases = rawPhases.slice(0, 8).flatMap((phase) => {
-    const name = cleanString(phase?.name);
-    if (!name) return [];
-    const callouts = Array.isArray(phase?.callouts) ? phase.callouts : [];
-    return [{
-      name,
-      timing: optionalString(phase?.timing),
-      description: optionalString(phase?.description),
-      callouts: callouts
-        .map((callout) => repairCalloutName(callout, lookup))
-        .filter((callout): callout is string => Boolean(callout)),
-    }];
-  });
+  const dedupedUtility = dedupUtility(utility);
+  const dedupedArrows = dedupArrows(arrows);
+  const phases = mergePhaseLists(
+    rawPhases.slice(0, MAX_PHASES).flatMap((phase) => {
+      const name = cleanString(phase?.name);
+      if (!name) return [];
+      const callouts = Array.isArray(phase?.callouts) ? phase.callouts : [];
+      return [{
+        name: canonicalPhaseName(name) || name,
+        timing: optionalString(phase?.timing),
+        description: optionalString(phase?.description),
+        callouts: callouts
+          .map((callout) => repairCalloutName(callout, lookup))
+          .filter((callout): callout is string => Boolean(callout)),
+      }];
+    }),
+    inferPhases(tactical.strategy || "", players, dedupedUtility, dedupedArrows, side)
+  );
 
   const repaired: TacticalData = {
     ...tactical,
@@ -475,8 +650,8 @@ export function repairTacticalCallouts(tactical: TacticalData): TacticalData | n
     side,
     strategy: optionalString(tactical.strategy) || `${side} Strategy`,
     players,
-    utility: dedupUtility(utility),
-    arrows: dedupArrows(arrows),
+    utility: dedupedUtility,
+    arrows: dedupedArrows,
     phases,
   };
 
@@ -524,6 +699,7 @@ export function toRendererOptions(tactical: TacticalData) {
       label: p.label,
       timing: p.timing,
       task: p.task,
+      phase: p.phase,
     })),
     utility: tactical.utility.map((u) => ({
       type: u.type as "smoke" | "flash" | "molotov" | "he",
@@ -533,6 +709,7 @@ export function toRendererOptions(tactical: TacticalData) {
       timing: u.timing,
       purpose: u.purpose,
       player: u.player,
+      phase: u.phase,
     })),
     arrows: tactical.arrows.map((a) => ({
       from: a.from,
@@ -643,6 +820,7 @@ export function extractTacticalFromText(
           team: side,
           timing: guessTimingFromContext(rest),
           task: summarizeTask(rest),
+          phase: phaseFromContext([guessPhaseFromContext(rest), rest], "Opening"),
         });
 
         // Also try to detect movement arrow from "va vers X" / "advances to X"
@@ -720,6 +898,7 @@ export function extractTacticalFromText(
           description: `${up.type} on ${target}`,
           timing: guessTimingFromContext(around),
           purpose: guessUtilityPurpose(around),
+          phase: phaseFromContext([guessPhaseFromContext(around), around], "Execute"),
         });
 
         // Add a utility arrow
@@ -750,14 +929,16 @@ export function extractTacticalFromText(
         const from = matchCallout(mMatch[1], calloutLookup);
         const to = matchCallout(mMatch[2], calloutLookup);
         if (from && to && from !== to) {
-          // Avoid duplicates
-          if (!arrows.some((a) => a.from === from && a.to === to)) {
+          const around = lowerResp.slice(Math.max(0, mMatch.index - 80), Math.min(lowerResp.length, mMatch.index + 120));
+          const timing = guessTimingFromContext(around);
+          const phase = guessPhaseFromContext(around);
+          if (!arrows.some((a) => a.from === from && a.to === to && a.timing === timing && a.phase === phase)) {
             arrows.push({
               from,
               to,
               type: "movement",
-              timing: guessTimingFromContext(lowerResp.slice(Math.max(0, mMatch.index - 80), Math.min(lowerResp.length, mMatch.index + 120))),
-              phase: guessPhaseFromContext(lowerResp.slice(Math.max(0, mMatch.index - 80), Math.min(lowerResp.length, mMatch.index + 120))),
+              timing,
+              phase,
             });
           }
         }
@@ -793,7 +974,7 @@ export function extractTacticalFromText(
     players: uniquePlayers,
     utility: dedupUtility(utility),
     arrows: dedupArrows(arrows),
-    phases: inferPhases(response, uniquePlayers, utility, arrows),
+    phases: inferPhases(response, uniquePlayers, utility, arrows, side),
   };
 }
 
@@ -839,47 +1020,155 @@ export function getDefaultTactical(
                 ? "igl"
                 : "lurk",
       team: side,
+      timing: i < 2 ? "0:00" : "0:15",
+      task: i < 2 ? "Take opening route" : "Hold map control spacing",
+      phase: i < 2 ? "Opening" : "Map control",
     })
   );
 
-  // Add simple arrows from spawn to first positions
+  const preferredSite = /\b(b\s*(site|execute|rush|split)|site\s*b|push\s*b)\b/i.test(lowerResp)
+    ? "B"
+    : "A";
+  const siteKeys = Object.keys(data.sites);
+  const objectiveSite = siteKeys.find((site) => site.toLowerCase() === preferredSite.toLowerCase()) || siteKeys[0];
+  const objectiveCallout =
+    callouts.find((callout) => callout.toLowerCase() === `${objectiveSite} site`.toLowerCase()) ||
+    callouts.find((callout) => callout.toLowerCase() === objectiveSite.toLowerCase()) ||
+    selectedPositions.find((position) => !position.toLowerCase().includes("spawn")) ||
+    selectedPositions[0] ||
+    callouts[0];
+
+  // Add a full default timeline: spawn routes, control routes, execute, and close.
   const spawnName = side === "CT" ? "CT Spawn" : "T Spawn";
   const spawnCallout = callouts.find((c) => c.toLowerCase() === spawnName.toLowerCase());
   const arrows: TacticalData["arrows"] = [];
+  const nonSpawnPositions = selectedPositions.filter((position) => !position.toLowerCase().includes("spawn"));
+  const controlA = nonSpawnPositions[0] || objectiveCallout;
+  const controlB = nonSpawnPositions[1] || controlA;
+  const executeSource = nonSpawnPositions.find((position) => position.toLowerCase() !== objectiveCallout.toLowerCase()) || controlA;
+  const postTargets = nearestCallouts(data, objectiveCallout, [objectiveCallout, spawnCallout || ""], 3);
 
   if (spawnCallout) {
-    // Add arrows from spawn to each player position (max 3 to avoid clutter)
-    for (let i = 0; i < Math.min(players.length, 3); i++) {
-      if (players[i].position.toLowerCase() !== spawnCallout.toLowerCase()) {
+    for (let i = 0; i < Math.min(nonSpawnPositions.length, 2); i++) {
+      if (nonSpawnPositions[i].toLowerCase() !== spawnCallout.toLowerCase()) {
         arrows.push({
           from: spawnCallout,
-          to: players[i].position,
+          to: nonSpawnPositions[i],
           type: "movement",
           timing: i === 0 ? "0:00" : "0:05",
           phase: "Opening",
-          label: `${players[i].role} route`,
+          label: `${players[i]?.role || "player"} route`,
         });
       }
     }
   }
 
+  if (controlA && controlB && controlA.toLowerCase() !== controlB.toLowerCase()) {
+    arrows.push({
+      from: controlA,
+      to: controlB,
+      type: "movement",
+      timing: "0:20",
+      phase: "Map control",
+      label: "control trade",
+    });
+  }
+
+  if (executeSource && objectiveCallout && executeSource.toLowerCase() !== objectiveCallout.toLowerCase()) {
+    arrows.push({
+      from: executeSource,
+      to: objectiveCallout,
+      type: "movement",
+      timing: "0:45",
+      phase: side === "T" ? "Execute" : "Rotation",
+      label: `${objectiveSite} hit`,
+    });
+  }
+
+  if (objectiveCallout && postTargets.length > 0) {
+    arrows.push({
+      from: objectiveCallout,
+      to: postTargets[0],
+      type: side === "T" ? "movement" : "rotation",
+      timing: side === "T" ? "post-plant" : "retake",
+      phase: side === "T" ? "Post-plant" : "Retake",
+      label: side === "T" ? "post hold" : "retake group",
+    });
+  }
+
+  const defenderSpawn = callouts.find((callout) =>
+    callout.toLowerCase() === (side === "T" ? "ct spawn" : "t spawn")
+  );
+  const utilityTarget = defenderSpawn || objectiveCallout;
+  const utilitySource = controlB || controlA || spawnCallout || selectedPositions[0];
+  const utility: TacticalData["utility"] = [];
+
+  if (utilitySource && utilityTarget) {
+    utility.push({
+      type: "smoke",
+      from: utilitySource,
+      to: utilityTarget,
+      description: `smoke ${utilityTarget}`,
+      timing: "0:40",
+      purpose: side === "T" ? "Block retake vision" : "Delay the hit",
+      player: "support",
+      phase: side === "T" ? "Execute" : "Rotation",
+    });
+    utility.push({
+      type: "flash",
+      from: utilitySource,
+      to: objectiveCallout,
+      description: `flash ${objectiveCallout}`,
+      timing: "0:44",
+      purpose: side === "T" ? "Blind anchors for entry" : "Enable retake swing",
+      player: "entry/support",
+      phase: side === "T" ? "Execute" : "Retake",
+    });
+  }
+
+  if (postTargets.length > 1) {
+    utility.push({
+      type: side === "T" ? "molotov" : "he",
+      from: objectiveCallout,
+      to: postTargets[1],
+      description: `${side === "T" ? "molotov" : "HE"} ${postTargets[1]}`,
+      timing: side === "T" ? "post-plant" : "retake",
+      purpose: side === "T" ? "Deny retake path" : "Chip post-plant hold",
+      phase: side === "T" ? "Post-plant" : "Retake",
+    });
+  }
+
+  if (spawnCallout && utilityTarget && utilityTarget.toLowerCase() !== spawnCallout.toLowerCase()) {
+    arrows.push({
+      from: utilitySource || spawnCallout,
+      to: utilityTarget,
+      type: "utility",
+      timing: "0:40",
+      phase: "Execute",
+      label: `smoke ${utilityTarget}`,
+    });
+  }
+
   const strategy = guessStrategyName(response, side);
+  const defaultPhaseContext = side === "T"
+    ? `${response} execute post-plant`
+    : `${response} map control rotation retake`;
+  const phases = inferPhases(
+    defaultPhaseContext,
+    players,
+    utility,
+    arrows,
+    side
+  );
 
   return {
     map: mapName.toLowerCase(),
     side,
     strategy: strategy || `Default ${side} Setup`,
     players,
-    utility: [],
+    utility,
     arrows,
-    phases: [
-      {
-        name: "Opening",
-        timing: "0:00-0:15",
-        description: `${side} players take initial spacing and map control.`,
-        callouts: players.map((player) => player.position),
-      },
-    ],
+    phases,
   };
 }
 
@@ -914,10 +1203,10 @@ Return ONLY valid JSON with this exact structure (no markdown, no explanation):
   "side": "CT or T",
   "strategy": "brief strategy name",
   "players": [
-    {"position": "callout_name", "role": "entry|support|awp|igl|lurk", "team": "CT or T", "timing": "0:00|0:15|mid-round|late", "task": "short player job"}
+    {"position": "callout_name", "role": "entry|support|awp|igl|lurk", "team": "CT or T", "timing": "0:00|0:15|mid-round|late", "phase": "Opening|Map control|Execute|Post-plant|Retake|Rotation", "task": "short player job"}
   ],
   "utility": [
-    {"type": "smoke|flash|molotov|he", "from": "callout", "to": "callout", "description": "what it does", "timing": "when to throw", "purpose": "why it matters", "player": "role/player if known"}
+    {"type": "smoke|flash|molotov|he", "from": "callout", "to": "callout", "description": "what it does", "timing": "when to throw", "phase": "Opening|Map control|Execute|Post-plant|Retake|Rotation", "purpose": "why it matters", "player": "role/player if known"}
   ],
   "arrows": [
     {"from": "callout", "to": "callout", "type": "movement|utility|rotation", "timing": "when", "phase": "Opening|Map control|Execute|Post-plant|Retake", "label": "short route label"}
@@ -931,6 +1220,8 @@ RULES:
 - Use ONLY callout names from the VALID CALLOUTS list above
 - Include up to 5 players (fewer if the text doesn't describe all 5 positions)
 - Add timing/phases when implied by the advice; use short labels if exact seconds are not available
+- Assign every player, utility, and arrow to the most relevant phase
+- Include an ordered timeline that covers the complete plan, not only the opening: Opening, Map control, Execute, then Post-plant for T executes or Retake/Rotation for defensive/contingency plans
 - Capture distinct utility purposes: smoke vision block, flash entry, molotov clear/deny, HE damage/chip
 - Include rotation/post-plant/retake routes when the advice mentions contingencies
 - Detect the side (CT or T) from the coaching advice context
@@ -1167,39 +1458,89 @@ function inferPhases(
   response: string,
   players: TacticalData["players"],
   utility: TacticalData["utility"],
-  arrows: TacticalData["arrows"]
-): TacticalData["phases"] {
+  arrows: TacticalData["arrows"],
+  side: "CT" | "T"
+): NonNullable<TacticalData["phases"]> {
   const phases: NonNullable<TacticalData["phases"]> = [];
   const lower = response.toLowerCase();
+  const hasDetails = players.length > 0 || utility.length > 0 || arrows.length > 0;
+  if (!hasDetails) return phases;
 
-  if (players.length > 0) {
-    phases.push({
-      name: "Opening",
-      timing: "0:00-0:15",
-      description: "Initial spacing and role assignments.",
-      callouts: players.map((player) => player.position).slice(0, 5),
-    });
+  const calloutsForPhase = (phase: CanonicalPhase): string[] => uniqueStrings([
+    ...players
+      .filter((player) => canonicalPhaseName(player.phase) === phase)
+      .map((player) => player.position),
+    ...utility
+      .filter((util) => canonicalPhaseName(util.phase) === phase)
+      .flatMap((util) => [util.from, util.to]),
+    ...arrows
+      .filter((arrow) => canonicalPhaseName(arrow.phase) === phase)
+      .flatMap((arrow) => [arrow.from, arrow.to]),
+  ], 8);
+
+  const allPlayerCallouts = players.map((player) => player.position);
+  const allArrowCallouts = arrows.flatMap((arrow) => [arrow.from, arrow.to]);
+  const executeIntent = /execute|exec|hit|commit|explode|go\s+|pop|plant|site/i.test(lower) || (side === "T" && utility.length > 0);
+  const controlIntent = /default|map\s*control|control|contrôle|controle|mid[-\s]?round|take\s+space|pressure/i.test(lower) || players.length > 1;
+  const postPlantIntent = side === "T" && (executeIntent || /post[-\s]?plant|after\s+plant|après\s+plant|apres\s+plant|bomb/i.test(lower));
+  const retakeIntent = /retake|reprise|defuse|désamor|desamor/i.test(lower) || side === "CT";
+  const rotationIntent = arrows.some((arrow) => arrow.type === "rotation") || /rotate|rotation|fallback|regroup|pivot|late[-\s]?round/i.test(lower) || side === "CT";
+
+  phases.push(makePhase(
+    "Opening",
+    side,
+    uniqueStrings([...calloutsForPhase("Opening"), ...allPlayerCallouts, ...utility.map((util) => util.from)], 8)
+  ));
+
+  if (controlIntent || phases.length < 2) {
+    phases.push(makePhase(
+      "Map control",
+      side,
+      uniqueStrings([...calloutsForPhase("Map control"), ...allPlayerCallouts, ...allArrowCallouts], 8)
+    ));
   }
 
-  if (utility.length > 0 || /execute|exec|go|pop/i.test(lower)) {
-    phases.push({
-      name: "Execute",
-      timing: "execute",
-      description: "Commit with the listed utility and trade paths.",
-      callouts: utility.map((util) => util.to).slice(0, 5),
-    });
+  if (executeIntent || side === "T") {
+    phases.push(makePhase(
+      "Execute",
+      side,
+      uniqueStrings([...calloutsForPhase("Execute"), ...utility.map((util) => util.to), ...arrows.filter((arrow) => arrow.type === "utility").map((arrow) => arrow.to)], 8)
+    ));
   }
 
-  if (arrows.some((arrow) => arrow.type === "rotation") || /rotate|rotation|retake|post[-\s]?plant/i.test(lower)) {
-    phases.push({
-      name: /retake|reprise/i.test(lower) ? "Retake" : "Rotation",
-      timing: /late|fin|post[-\s]?plant/i.test(lower) ? "late" : "mid-round",
-      description: "Fallback, rotation, or retake route if the first plan stalls.",
-      callouts: arrows.flatMap((arrow) => [arrow.from, arrow.to]).slice(0, 6),
-    });
+  if (postPlantIntent) {
+    phases.push(makePhase(
+      "Post-plant",
+      side,
+      uniqueStrings([...calloutsForPhase("Post-plant"), ...utility.map((util) => util.to), ...arrows.map((arrow) => arrow.to)], 8)
+    ));
   }
 
-  return phases;
+  if (retakeIntent) {
+    phases.push(makePhase(
+      "Retake",
+      side,
+      uniqueStrings([...calloutsForPhase("Retake"), ...arrows.map((arrow) => arrow.to), ...utility.map((util) => util.to)], 8)
+    ));
+  }
+
+  if (rotationIntent) {
+    phases.push(makePhase(
+      "Rotation",
+      side,
+      uniqueStrings([...calloutsForPhase("Rotation"), ...allArrowCallouts, ...allPlayerCallouts], 8)
+    ));
+  }
+
+  if (side === "T" && phases.length < 4) {
+    phases.push(makePhase("Post-plant", side, uniqueStrings([...utility.map((util) => util.to), ...allArrowCallouts, ...allPlayerCallouts], 8)));
+  }
+  if (side === "CT" && phases.length < 4) {
+    phases.push(makePhase("Rotation", side, uniqueStrings([...allArrowCallouts, ...allPlayerCallouts], 8)));
+    phases.push(makePhase("Retake", side, uniqueStrings([...utility.map((util) => util.to), ...allArrowCallouts], 8)));
+  }
+
+  return mergePhaseLists([], phases);
 }
 
 /**
@@ -1324,7 +1665,7 @@ function dedupUtility(
 ): TacticalData["utility"] {
   const seen = new Set<string>();
   return utility.filter((u) => {
-    const key = `${u.type}:${u.from}:${u.to}`.toLowerCase();
+    const key = `${u.type}:${u.from}:${u.to}:${u.timing || ""}:${u.phase || ""}:${u.purpose || ""}`.toLowerCase();
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
@@ -1339,7 +1680,7 @@ function dedupArrows(
 ): TacticalData["arrows"] {
   const seen = new Set<string>();
   return arrows.filter((a) => {
-    const key = `${a.from}:${a.to}:${a.type}`.toLowerCase();
+    const key = `${a.from}:${a.to}:${a.type}:${a.timing || ""}:${a.phase || ""}:${a.label || ""}`.toLowerCase();
     if (seen.has(key)) return false;
     seen.add(key);
     return true;

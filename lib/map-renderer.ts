@@ -12,6 +12,7 @@ export interface PlayerMarker {
   label?: string;
   timing?: string;
   task?: string;
+  phase?: string;
 }
 
 export interface UtilityMarker {
@@ -22,6 +23,7 @@ export interface UtilityMarker {
   timing?: string;
   purpose?: string;
   player?: string;
+  phase?: string;
 }
 
 export interface Arrow {
@@ -103,7 +105,28 @@ const SCALE = 1.024;
 const MAP_SIZE = 1024;
 
 /** Annotation scale relative to the base radar image. */
-const ANNOTATION_SCALE = 1.25;
+const ANNOTATION_SCALE = 1.65;
+const PHASE_CAP = 8;
+const TACTICAL_FONT = "'JetBrains Mono', monospace";
+const TEXT_HALO = 'paint-order="stroke" stroke="rgba(0,0,0,0.88)" stroke-width="3" stroke-linejoin="round"';
+const SMALL_TEXT_HALO = 'paint-order="stroke" stroke="rgba(0,0,0,0.82)" stroke-width="2" stroke-linejoin="round"';
+
+const PHASE_ORDER = [
+  "Opening",
+  "Map control",
+  "Execute",
+  "Post-plant",
+  "Retake",
+  "Rotation",
+] as const;
+
+type PhaseType = "opening" | "map-control" | "execute" | "post-plant" | "retake" | "rotation" | "custom";
+
+interface PhaseMeta {
+  index: number;
+  name: string;
+  type: PhaseType;
+}
 
 const ROLE_LETTER: Record<string, string> = {
   entry: "E",
@@ -167,6 +190,80 @@ function compact(parts: Array<string | undefined | null>): string[] {
 
 function tooltip(parts: Array<string | undefined | null>): string {
   return compact(parts).join(" · ");
+}
+
+function phaseTypeFromText(value: string | undefined | null): PhaseType {
+  const lower = value?.toLowerCase().trim() || "";
+  if (!lower) return "custom";
+  if (/retake|reprise|defuse/.test(lower)) return "retake";
+  if (/post[-\s]?plant|after\s+plant|après\s+plant|apres\s+plant/.test(lower)) return "post-plant";
+  if (/execute|exec|commit|explode|go\s+signal|pop|contact/.test(lower)) return "execute";
+  if (/map\s*control|control|contrôle|controle|default|mid[-\s]?round|take\s+space|pressure/.test(lower)) return "map-control";
+  if (/rotate|rotation|fallback|regroup|pivot|late[-\s]?round/.test(lower)) return "rotation";
+  if (/opening|spawn|freeze|start|début|debut|initial|first\s+contact|0:00/.test(lower)) return "opening";
+  return "custom";
+}
+
+function canonicalPhaseName(value: string | undefined | null): string | undefined {
+  const type = phaseTypeFromText(value);
+  if (type === "custom") return value?.trim() || undefined;
+  const canonical = PHASE_ORDER.find((phase) => phaseTypeFromText(phase) === type);
+  return canonical || value?.trim() || undefined;
+}
+
+function phaseOrderIndex(phase: PhaseNote): number {
+  const type = phaseTypeFromText(phase.name);
+  const index = PHASE_ORDER.findIndex((name) => phaseTypeFromText(name) === type);
+  return index >= 0 ? index : PHASE_ORDER.length;
+}
+
+function normalizePhases(phases: PhaseNote[] | undefined): PhaseMeta[] {
+  const seen = new Set<string>();
+  return (phases || [])
+    .map((phase) => ({
+      ...phase,
+      name: canonicalPhaseName(phase.name) || phase.name,
+    }))
+    .filter((phase) => {
+      const name = phase.name.trim();
+      if (!name) return false;
+      const key = name.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .sort((a, b) => phaseOrderIndex(a) - phaseOrderIndex(b))
+    .slice(0, PHASE_CAP)
+    .map((phase, index) => ({
+      index,
+      name: phase.name,
+      type: phaseTypeFromText(phase.name),
+    }));
+}
+
+function phaseMetaFor(
+  phases: PhaseMeta[],
+  hints: Array<string | undefined | null>,
+  fallbackName: string
+): PhaseMeta | null {
+  if (phases.length === 0) return null;
+  const names = compact([...hints, fallbackName]);
+  for (const name of names) {
+    const canonical = canonicalPhaseName(name) || name;
+    const type = phaseTypeFromText(canonical);
+    const exact = phases.find((phase) => phase.name.toLowerCase() === canonical.toLowerCase());
+    if (exact) return exact;
+    if (type !== "custom") {
+      const byType = phases.find((phase) => phase.type === type);
+      if (byType) return byType;
+    }
+  }
+  return phases[0];
+}
+
+function phaseAttrs(meta: PhaseMeta | null): string {
+  if (!meta) return "";
+  return `data-tm-phase-index="${meta.index}" data-tm-phase-name="${escXml(meta.name)}" data-tm-phase-type="${meta.type}"`;
 }
 
 function roleLabel(role: PlayerMarker["role"]): string {
@@ -302,15 +399,16 @@ export function renderTacticalMap(options: TacticalMapOptions): string {
     .replace(/<\/svg>\s*$/, "");        // Remove closing </svg>
 
   const overlays: string[] = [];
+  const phaseItems = normalizePhases(options.phases);
 
   // -- Defs for arrowhead markers --
   overlays.push(`
   <defs>
-    <marker id="arrowPush" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-      <polygon points="0 0, 10 3.5, 0 7" fill="#FFFFFF"/>
+    <marker id="arrowPush" markerWidth="16" markerHeight="12" refX="15" refY="6" orient="auto">
+      <polygon points="0 0, 16 6, 0 12" fill="#FFFFFF"/>
     </marker>
-    <marker id="arrowThrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-      <polygon points="0 0, 10 3.5, 0 7" fill="#FFD600"/>
+    <marker id="arrowThrow" markerWidth="16" markerHeight="12" refX="15" refY="6" orient="auto">
+      <polygon points="0 0, 16 6, 0 12" fill="#FFD600"/>
     </marker>
   </defs>`);
 
@@ -327,23 +425,23 @@ export function renderTacticalMap(options: TacticalMapOptions): string {
         .join(" ");
 
       const zoneColors: Record<string, string> = {
-        site: "rgba(255,200,0,0.15)",
-        spawn: "rgba(100,100,255,0.12)",
-        connector: "rgba(100,255,100,0.10)",
-        area: "rgba(200,200,200,0.08)",
+        site: "rgba(255,200,0,0.055)",
+        spawn: "rgba(100,100,255,0.045)",
+        connector: "rgba(100,255,100,0.04)",
+        area: "rgba(200,200,200,0.03)",
       };
-      const fillColor = zoneColors[zone.type] || "rgba(200,200,200,0.08)";
+      const fillColor = zoneColors[zone.type] || "rgba(200,200,200,0.03)";
       const zoneAttrs = `data-tm-type="zone" data-tm-callout="${escXml(zone.name)}" data-tm-tooltip="${escXml(zone.name)}" class="tm-zone"`;
 
       overlays.push(
-        `<polygon ${zoneAttrs} points="${polyPoints}" fill="${fillColor}" stroke="rgba(255,255,255,0.3)" stroke-width="${annotationSize(1)}"/>`
+        `<polygon ${zoneAttrs} points="${polyPoints}" fill="${fillColor}" stroke="rgba(255,255,255,0.12)" stroke-width="${annotationSize(0.75)}"/>`
       );
 
       // Zone label at centroid
       const cx = sx(zone.centroid.x);
       const cy = sy(zone.centroid.y);
       overlays.push(
-        `<text data-tm-type="zone" class="tm-zone" x="${cx}" y="${cy}" font-size="${annotationSize(9)}" fill="rgba(255,255,255,0.6)" text-anchor="middle" dominant-baseline="middle" font-family="sans-serif">${escXml(zone.name)}</text>`
+        `<text data-tm-type="zone" class="tm-zone" x="${cx}" y="${cy}" font-size="${annotationSize(7)}" fill="rgba(255,255,255,0.28)" text-anchor="middle" dominant-baseline="middle" font-family="${TACTICAL_FONT}">${escXml(zone.name)}</text>`
       );
     }
   }
@@ -354,7 +452,7 @@ export function renderTacticalMap(options: TacticalMapOptions): string {
       const cx = sx(c.x);
       const cy = sy(c.y);
       overlays.push(
-        `<text data-tm-type="zone" data-tm-tooltip="${escXml(c.name)}" class="tm-zone" x="${cx}" y="${cy + annotationSize(20)}" font-size="${annotationSize(8)}" fill="rgba(255,255,255,0.5)" text-anchor="middle" font-family="sans-serif">${escXml(c.name)}</text>`
+        `<text data-tm-type="zone" data-tm-tooltip="${escXml(c.name)}" class="tm-zone" x="${cx}" y="${cy + annotationSize(20)}" font-size="${annotationSize(6.5)}" fill="rgba(255,255,255,0.24)" text-anchor="middle" font-family="${TACTICAL_FONT}">${escXml(c.name)}</text>`
       );
     }
   }
@@ -373,26 +471,31 @@ export function renderTacticalMap(options: TacticalMapOptions): string {
 
       const isThrow = arrow.type === "throw";
       const strokeColor = arrow.color || (isThrow ? "#FFD600" : "#FFFFFF");
-      const dashArray = isThrow ? `stroke-dasharray="${dashPattern(8, 4)}"` : "";
+      const dashArray = isThrow ? `stroke-dasharray="${dashPattern(9, 5)}"` : "";
       const markerEnd = isThrow ? 'marker-end="url(#arrowThrow)"' : 'marker-end="url(#arrowPush)"';
-      const arrowLabel = labelText([arrow.phase, arrow.timing, arrow.label], 30);
+      const phaseMeta = phaseMetaFor(phaseItems, [arrow.phase, arrow.timing, arrow.label, arrow.type], isThrow ? "Execute" : "Map control");
+      const phaseAttrText = phaseAttrs(phaseMeta);
+      const arrowLabel = labelText([phaseMeta ? `${phaseMeta.index + 1}. ${phaseMeta.name}` : arrow.phase, arrow.timing, arrow.label], 38);
       const arrowTooltip = tooltip([
         isThrow ? "Throw route" : "Movement route",
-        arrow.phase,
+        phaseMeta ? `${phaseMeta.index + 1}. ${phaseMeta.name}` : arrow.phase,
         arrow.timing,
         arrow.label,
         `${arrow.from} → ${arrow.to}`,
       ]);
 
       overlays.push(
-        `<line data-tm-type="arrow" data-tm-tooltip="${escXml(arrowTooltip)}" class="tm-arrow" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${strokeColor}" stroke-width="${annotationSize(2.5)}" ${dashArray} ${markerEnd} opacity="0.85"/>`
+        `<line data-tm-type="arrow" ${phaseAttrText} data-tm-tooltip="${escXml(arrowTooltip)}" class="tm-arrow" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="rgba(0,0,0,0.74)" stroke-width="${annotationSize(6)}" ${dashArray} stroke-linecap="round" opacity="0.9"/>`
+      );
+      overlays.push(
+        `<line data-tm-type="arrow" ${phaseAttrText} data-tm-tooltip="${escXml(arrowTooltip)}" class="tm-arrow" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${strokeColor}" stroke-width="${annotationSize(3.6)}" ${dashArray} ${markerEnd} stroke-linecap="round" opacity="0.97"/>`
       );
 
       if (arrowLabel) {
         const mx = (x1 + x2) / 2;
         const my = (y1 + y2) / 2;
         overlays.push(
-          `<text data-tm-type="arrow" data-tm-tooltip="${escXml(arrowTooltip)}" class="tm-arrow" x="${mx}" y="${my - annotationSize(6)}" font-size="${annotationSize(8)}" fill="${strokeColor}" text-anchor="middle" font-family="sans-serif">${escXml(arrowLabel)}</text>`
+          `<text data-tm-type="arrow" ${phaseAttrText} data-tm-tooltip="${escXml(arrowTooltip)}" class="tm-arrow" x="${mx}" y="${my - annotationSize(8)}" font-size="${annotationSize(10.5)}" font-weight="800" fill="${strokeColor}" ${SMALL_TEXT_HALO} text-anchor="middle" font-family="${TACTICAL_FONT}">${escXml(arrowLabel)}</text>`
         );
       }
     }
@@ -408,24 +511,30 @@ export function renderTacticalMap(options: TacticalMapOptions): string {
       const tx = sx(toCoord.x);
       const ty = sy(toCoord.y);
       const style = UTILITY_STYLE[util.type] || UTILITY_STYLE.smoke;
-      const r = annotationSize(10);
+      const r = annotationSize(13.5);
       const utilName = style.name;
-      const utilLabel = labelText([util.timing, util.label || util.purpose], 30);
+      const phaseMeta = phaseMetaFor(phaseItems, [util.phase, util.timing, util.purpose, util.label], "Execute");
+      const phaseAttrText = phaseAttrs(phaseMeta);
+      const utilLabel = labelText([phaseMeta ? `${phaseMeta.index + 1}. ${phaseMeta.name}` : util.phase, util.timing, util.label || util.purpose], 38);
       const utilTooltip = tooltip([
         utilName,
+        phaseMeta ? `${phaseMeta.index + 1}. ${phaseMeta.name}` : util.phase,
         util.timing,
         util.player,
         util.purpose || util.label,
         `${util.from} → ${util.to}`,
       ]);
-      const utilAttrs = `data-tm-type="utility" data-tm-utility-type="${escXml(utilName)}" data-tm-tooltip="${escXml(utilTooltip)}" class="tm-utility"`;
+      const utilAttrs = `data-tm-type="utility" ${phaseAttrText} data-tm-utility-type="${escXml(utilName)}" data-tm-tooltip="${escXml(utilTooltip)}" class="tm-utility"`;
 
       // Throw trajectory line
       if (fromCoord) {
         const fx = sx(fromCoord.x);
         const fy = sy(fromCoord.y);
         overlays.push(
-          `<line ${utilAttrs} x1="${fx}" y1="${fy}" x2="${tx}" y2="${ty}" stroke="${style.fill}" stroke-width="${annotationSize(1.5)}" stroke-dasharray="${dashPattern(4, 3)}" opacity="0.6"/>`
+          `<line ${utilAttrs} x1="${fx}" y1="${fy}" x2="${tx}" y2="${ty}" stroke="rgba(0,0,0,0.7)" stroke-width="${annotationSize(4.2)}" stroke-dasharray="${dashPattern(5, 4)}" stroke-linecap="round" opacity="0.85"/>`
+        );
+        overlays.push(
+          `<line ${utilAttrs} x1="${fx}" y1="${fy}" x2="${tx}" y2="${ty}" stroke="${style.fill}" stroke-width="${annotationSize(2.4)}" stroke-dasharray="${dashPattern(5, 4)}" stroke-linecap="round" opacity="0.9"/>`
         );
       }
 
@@ -433,33 +542,33 @@ export function renderTacticalMap(options: TacticalMapOptions): string {
       if (style.shape === "star") {
         const pts = starPoints(tx, ty, r, r * 0.45, 5);
         overlays.push(
-          `<polygon ${utilAttrs} points="${pts}" fill="${style.fill}" stroke="white" stroke-width="${annotationSize(1)}" opacity="0.9"/>`
+          `<polygon ${utilAttrs} points="${pts}" fill="${style.fill}" stroke="white" stroke-width="${annotationSize(1.8)}" opacity="0.98"/>`
         );
       } else if (style.shape === "diamond") {
         const pts = regularPolygonPoints(tx, ty, r, 4, -Math.PI / 2);
         overlays.push(
-          `<polygon ${utilAttrs} points="${pts}" fill="${style.fill}" stroke="white" stroke-width="${annotationSize(1)}" opacity="0.9"/>`
+          `<polygon ${utilAttrs} points="${pts}" fill="${style.fill}" stroke="white" stroke-width="${annotationSize(1.8)}" opacity="0.98"/>`
         );
       } else if (style.shape === "hex") {
         const pts = regularPolygonPoints(tx, ty, r, 6);
         overlays.push(
-          `<polygon ${utilAttrs} points="${pts}" fill="${style.fill}" stroke="white" stroke-width="${annotationSize(1)}" opacity="0.9"/>`
+          `<polygon ${utilAttrs} points="${pts}" fill="${style.fill}" stroke="white" stroke-width="${annotationSize(1.8)}" opacity="0.98"/>`
         );
       } else {
         overlays.push(
-          `<circle ${utilAttrs} cx="${tx}" cy="${ty}" r="${r}" fill="${style.fill}" stroke="white" stroke-width="${annotationSize(1)}" opacity="0.9"/>`
+          `<circle ${utilAttrs} cx="${tx}" cy="${ty}" r="${r}" fill="${style.fill}" stroke="white" stroke-width="${annotationSize(1.8)}" opacity="0.98"/>`
         );
       }
 
       // Letter
       overlays.push(
-        `<text ${utilAttrs} x="${tx}" y="${ty + annotationSize(1)}" font-size="${annotationSize(10)}" font-weight="bold" fill="white" text-anchor="middle" dominant-baseline="middle" font-family="sans-serif">${style.letter}</text>`
+        `<text ${utilAttrs} x="${tx}" y="${ty + annotationSize(1)}" font-size="${annotationSize(13)}" font-weight="900" fill="white" ${SMALL_TEXT_HALO} text-anchor="middle" dominant-baseline="middle" font-family="${TACTICAL_FONT}">${style.letter}</text>`
       );
 
       // Optional label
       if (utilLabel) {
         overlays.push(
-          `<text ${utilAttrs} x="${tx}" y="${ty - annotationSize(14)}" font-size="${annotationSize(7)}" fill="white" text-anchor="middle" font-family="sans-serif">${escXml(utilLabel)}</text>`
+          `<text ${utilAttrs} x="${tx}" y="${ty - annotationSize(18)}" font-size="${annotationSize(9.5)}" font-weight="800" fill="white" ${TEXT_HALO} text-anchor="middle" font-family="${TACTICAL_FONT}">${escXml(utilLabel)}</text>`
         );
       }
     }
@@ -475,35 +584,38 @@ export function renderTacticalMap(options: TacticalMapOptions): string {
       const py = sy(coord.y);
       const colors = TEAM_COLORS[player.team] || TEAM_COLORS.T;
       const roleLetter = ROLE_LETTER[player.role] || "?";
-      const r = annotationSize(14);
+      const r = annotationSize(17);
       const role = roleLabel(player.role);
-      const playerLabel = labelText([player.label || role, player.timing, player.task], 32);
+      const phaseMeta = phaseMetaFor(phaseItems, [player.phase, player.timing, player.task, player.label], "Opening");
+      const phaseAttrText = phaseAttrs(phaseMeta);
+      const playerLabel = labelText([phaseMeta ? `${phaseMeta.index + 1}. ${phaseMeta.name}` : player.phase, player.label || role, player.timing, player.task], 42);
       const playerTooltip = tooltip([
         `${player.team} ${role}`,
+        phaseMeta ? `${phaseMeta.index + 1}. ${phaseMeta.name}` : player.phase,
         player.position,
         player.timing,
         player.task,
       ]);
-      const playerAttrs = `data-tm-type="player" data-tm-team="${escXml(player.team)}" data-tm-role="${escXml(role)}" data-tm-tooltip="${escXml(playerTooltip)}" class="tm-player"`;
+      const playerAttrs = `data-tm-type="player" ${phaseAttrText} data-tm-team="${escXml(player.team)}" data-tm-role="${escXml(role)}" data-tm-tooltip="${escXml(playerTooltip)}" class="tm-player"`;
 
       // Shadow
       overlays.push(
-        `<circle data-tm-type="player" class="tm-player" cx="${px + annotationSize(1)}" cy="${py + annotationSize(1)}" r="${r}" fill="rgba(0,0,0,0.4)"/>`
+        `<circle data-tm-type="player" ${phaseAttrText} class="tm-player" cx="${px + annotationSize(2)}" cy="${py + annotationSize(2)}" r="${r + annotationSize(2)}" fill="rgba(0,0,0,0.56)"/>`
       );
 
       // Main circle
       overlays.push(
-        `<circle ${playerAttrs} cx="${px}" cy="${py}" r="${r}" fill="${colors.fill}" stroke="${colors.stroke}" stroke-width="${annotationSize(2)}"/>`
+        `<circle ${playerAttrs} cx="${px}" cy="${py}" r="${r}" fill="${colors.fill}" stroke="${colors.stroke}" stroke-width="${annotationSize(3)}"/>`
       );
 
       // Role letter
       overlays.push(
-        `<text ${playerAttrs} x="${px}" y="${py + annotationSize(1)}" font-size="${annotationSize(13)}" font-weight="bold" fill="white" text-anchor="middle" dominant-baseline="middle" font-family="sans-serif">${roleLetter}</text>`
+        `<text ${playerAttrs} x="${px}" y="${py + annotationSize(1)}" font-size="${annotationSize(15)}" font-weight="900" fill="white" ${SMALL_TEXT_HALO} text-anchor="middle" dominant-baseline="middle" font-family="${TACTICAL_FONT}">${roleLetter}</text>`
       );
 
       if (playerLabel) {
         overlays.push(
-          `<text ${playerAttrs} x="${px}" y="${py + r + annotationSize(10)}" font-size="${annotationSize(7.5)}" fill="white" text-anchor="middle" font-family="sans-serif">${escXml(playerLabel)}</text>`
+          `<text ${playerAttrs} x="${px}" y="${py + r + annotationSize(14)}" font-size="${annotationSize(9.5)}" font-weight="800" fill="white" ${TEXT_HALO} text-anchor="middle" font-family="${TACTICAL_FONT}">${escXml(playerLabel)}</text>`
         );
       }
     }
@@ -519,19 +631,19 @@ export function renderTacticalMap(options: TacticalMapOptions): string {
 
   if (hasCT) {
     legendItems.push(
-      `<circle cx="840" cy="___Y___" r="${annotationSize(6)}" fill="#4FC3F7" stroke="white" stroke-width="${annotationSize(1.5)}"/><text x="852" y="___Y___" font-size="${annotationSize(9)}" fill="white" dominant-baseline="middle" font-family="sans-serif">CT Player</text>`
+      `<circle cx="840" cy="___Y___" r="${annotationSize(6)}" fill="#4FC3F7" stroke="white" stroke-width="${annotationSize(1.5)}"/><text x="852" y="___Y___" font-size="${annotationSize(9)}" fill="white" dominant-baseline="middle" font-family="${TACTICAL_FONT}">CT Player</text>`
     );
   }
   if (hasT) {
     legendItems.push(
-      `<circle cx="840" cy="___Y___" r="${annotationSize(6)}" fill="#EF5350" stroke="white" stroke-width="${annotationSize(1.5)}"/><text x="852" y="___Y___" font-size="${annotationSize(9)}" fill="white" dominant-baseline="middle" font-family="sans-serif">T Player</text>`
+      `<circle cx="840" cy="___Y___" r="${annotationSize(6)}" fill="#EF5350" stroke="white" stroke-width="${annotationSize(1.5)}"/><text x="852" y="___Y___" font-size="${annotationSize(9)}" fill="white" dominant-baseline="middle" font-family="${TACTICAL_FONT}">T Player</text>`
     );
   }
   for (const ut of usedUtilTypes) {
     const s = UTILITY_STYLE[ut];
     if (!s) continue;
     legendItems.push(
-      `<circle cx="840" cy="___Y___" r="${annotationSize(5)}" fill="${s.fill}" stroke="white" stroke-width="${annotationSize(1)}"/><text x="852" y="___Y___" font-size="${annotationSize(9)}" fill="white" dominant-baseline="middle" font-family="sans-serif">${s.name}</text>`
+      `<circle cx="840" cy="___Y___" r="${annotationSize(5)}" fill="${s.fill}" stroke="white" stroke-width="${annotationSize(1)}"/><text x="852" y="___Y___" font-size="${annotationSize(9)}" fill="white" dominant-baseline="middle" font-family="${TACTICAL_FONT}">${s.name}</text>`
     );
   }
 
@@ -553,22 +665,27 @@ export function renderTacticalMap(options: TacticalMapOptions): string {
   }
 
   // -- Phase / timing notes (bottom-left) --
-  const phaseItems = options.phases?.slice(0, 6) || [];
-  if (phaseItems.length > 0) {
+  const phaseNotes = (options.phases || [])
+    .map((phase) => ({ ...phase, name: canonicalPhaseName(phase.name) || phase.name }))
+    .sort((a, b) => phaseOrderIndex(a) - phaseOrderIndex(b))
+    .slice(0, PHASE_CAP);
+  if (phaseNotes.length > 0) {
     const boxX = 10;
-    const lineH = annotationSize(17);
-    const boxW = 360;
-    const boxH = annotationSize(34) + phaseItems.length * lineH;
+    const lineH = annotationSize(22);
+    const boxW = 455;
+    const boxH = annotationSize(42) + phaseNotes.length * lineH;
     const boxY = MAP_SIZE - boxH - 10;
-    let phaseSvg = `<rect data-tm-type="timing" class="tm-timing" x="${boxX}" y="${boxY}" width="${boxW}" height="${boxH}" rx="${annotationSize(4)}" fill="rgba(0,0,0,0.68)" stroke="rgba(255,255,255,0.2)" stroke-width="${annotationSize(1)}"/>`;
-    phaseSvg += `<text data-tm-type="timing" class="tm-timing" x="${boxX + annotationSize(10)}" y="${boxY + annotationSize(20)}" font-size="${annotationSize(10)}" font-weight="bold" fill="white" font-family="sans-serif">Timing / phases</text>`;
+    let phaseSvg = `<rect data-tm-type="timing" class="tm-timing" x="${boxX}" y="${boxY}" width="${boxW}" height="${boxH}" rx="${annotationSize(6)}" fill="rgba(0,0,0,0.74)" stroke="rgba(255,255,255,0.22)" stroke-width="${annotationSize(1)}"/>`;
+    phaseSvg += `<text data-tm-type="timing" class="tm-timing" x="${boxX + annotationSize(12)}" y="${boxY + annotationSize(24)}" font-size="${annotationSize(11)}" font-weight="900" fill="#ffb347" ${SMALL_TEXT_HALO} font-family="${TACTICAL_FONT}">TACTICAL TIMELINE</text>`;
 
-    phaseItems.forEach((phase, i) => {
-      const y = boxY + annotationSize(38) + i * lineH;
-      const prefix = compact([phase.timing, phase.name]).join(" — ");
-      const text = labelText([prefix, phase.description], 58);
+    phaseNotes.forEach((phase, i) => {
+      const meta = phaseItems[i] || { index: i, name: phase.name, type: phaseTypeFromText(phase.name) };
+      const attrs = phaseAttrs(meta);
+      const y = boxY + annotationSize(48) + i * lineH;
+      const prefix = compact([`${meta.index + 1}. ${meta.name}`, phase.timing]).join(" — ");
+      const text = labelText([prefix, phase.description], 66);
       const tip = tooltip([phase.timing, phase.name, phase.description, phase.callouts?.join(" → ")]);
-      phaseSvg += `<text data-tm-type="timing" data-tm-tooltip="${escXml(tip)}" class="tm-timing" x="${boxX + annotationSize(10)}" y="${y}" font-size="${annotationSize(8.5)}" fill="rgba(255,255,255,0.82)" font-family="sans-serif">${escXml(text)}</text>`;
+      phaseSvg += `<text data-tm-type="timing" ${attrs} data-tm-tooltip="${escXml(tip)}" class="tm-timing" x="${boxX + annotationSize(12)}" y="${y}" font-size="${annotationSize(9.5)}" font-weight="700" fill="rgba(255,255,255,0.88)" ${SMALL_TEXT_HALO} font-family="${TACTICAL_FONT}">${escXml(text)}</text>`;
     });
 
     overlays.push(phaseSvg);
@@ -580,12 +697,12 @@ export function renderTacticalMap(options: TacticalMapOptions): string {
       `<rect data-tm-type="system" x="0" y="0" width="${MAP_SIZE}" height="${annotationSize(36)}" fill="rgba(0,0,0,0.55)"/>`
     );
     overlays.push(
-      `<text data-tm-type="system" x="${annotationSize(12)}" y="${annotationSize(24)}" font-size="${annotationSize(18)}" font-weight="bold" fill="white" font-family="sans-serif">${escXml(options.title)}</text>`
+      `<text data-tm-type="system" x="${annotationSize(12)}" y="${annotationSize(24)}" font-size="${annotationSize(18)}" font-weight="900" fill="white" ${SMALL_TEXT_HALO} font-family="${TACTICAL_FONT}">${escXml(options.title)}</text>`
     );
     if (options.side) {
       const sideColor = options.side === "CT" ? "#4FC3F7" : "#EF5350";
       overlays.push(
-        `<text data-tm-type="system" x="${MAP_SIZE - annotationSize(12)}" y="${annotationSize(24)}" font-size="${annotationSize(14)}" fill="${sideColor}" text-anchor="end" font-family="sans-serif">${escXml(options.side)} Side</text>`
+        `<text data-tm-type="system" x="${MAP_SIZE - annotationSize(12)}" y="${annotationSize(24)}" font-size="${annotationSize(14)}" font-weight="800" fill="${sideColor}" ${SMALL_TEXT_HALO} text-anchor="end" font-family="${TACTICAL_FONT}">${escXml(options.side)} Side</text>`
       );
     }
   }
@@ -593,7 +710,7 @@ export function renderTacticalMap(options: TacticalMapOptions): string {
   // -- Compose final SVG --
   // Keep the base radar and annotation coordinates in the same 1024x1024
   // viewBox. Only marker/font/stroke dimensions are scaled by ANNOTATION_SCALE,
-  // so the callouts are 1.25x more readable without zooming the whole map.
+  // so tactical callouts are more readable without zooming the whole map.
   const finalSvg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${MAP_SIZE} ${MAP_SIZE}" width="${MAP_SIZE}" height="${MAP_SIZE}" role="img">
   <title>Tactical Map: ${escXml(options.title || mapName)}</title>
@@ -614,30 +731,38 @@ export function testGenerateMirageAExecute(): string {
     side: "T",
     title: "Mirage A Execute",
     players: [
-      { position: "T Spawn", role: "igl", team: "T" },
-      { position: "Top Mid", role: "awp", team: "T" },
-      { position: "Palace", role: "entry", team: "T" },
-      { position: "Apps Ramp", role: "lurk", team: "T" },
-      { position: "Catwalk", role: "support", team: "T" },
+      { position: "T Spawn", role: "igl", team: "T", phase: "Opening" },
+      { position: "Top Mid", role: "awp", team: "T", phase: "Map control" },
+      { position: "Palace", role: "entry", team: "T", phase: "Execute" },
+      { position: "Apps Ramp", role: "lurk", team: "T", phase: "Map control" },
+      { position: "Catwalk", role: "support", team: "T", phase: "Execute" },
     ],
     utility: [
-      { type: "smoke", from: "T Roof", to: "CT", label: "CT Smoke" },
-      { type: "smoke", from: "T Roof", to: "Jungle", label: "Jungle Smoke" },
+      { type: "smoke", from: "T Roof", to: "CT", label: "CT Smoke", phase: "Execute" },
+      { type: "smoke", from: "T Roof", to: "Jungle", label: "Jungle Smoke", phase: "Execute" },
       {
         type: "flash",
         from: "Top Mid",
         to: "A Site",
         label: "Pop Flash",
+        phase: "Execute",
       },
     ],
     arrows: [
-      { from: "Palace", to: "A Site", type: "push", color: "#EF5350" },
-      { from: "T Roof", to: "CT", type: "throw", color: "#9E9E9E" },
-      { from: "T Roof", to: "Jungle", type: "throw", color: "#9E9E9E" },
-      { from: "Top Mid", to: "A Site", type: "throw", color: "#FFD600" },
-      { from: "Catwalk", to: "Stairs", type: "push", color: "#EF5350" },
+      { from: "T Spawn", to: "Top Mid", type: "push", color: "#EF5350", phase: "Opening" },
+      { from: "Top Mid", to: "Catwalk", type: "push", color: "#EF5350", phase: "Map control" },
+      { from: "Palace", to: "A Site", type: "push", color: "#EF5350", phase: "Execute" },
+      { from: "T Roof", to: "CT", type: "throw", color: "#9E9E9E", phase: "Execute" },
+      { from: "T Roof", to: "Jungle", type: "throw", color: "#9E9E9E", phase: "Execute" },
+      { from: "A Site", to: "Ramp", type: "push", color: "#EF5350", phase: "Post-plant" },
     ],
-    showZones: true,
+    phases: [
+      { name: "Opening", timing: "0:00-0:15", description: "Leave spawn and take safe spacing." },
+      { name: "Map control", timing: "0:15-0:40", description: "Pressure mid and connector lanes." },
+      { name: "Execute", timing: "0:40-0:58", description: "Layer smokes and entries into A." },
+      { name: "Post-plant", timing: "post-plant", description: "Hold ramp and palace crossfires." },
+    ],
+    showZones: false,
   };
 
   const svg = renderTacticalMap(options);

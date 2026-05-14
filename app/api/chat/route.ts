@@ -12,6 +12,8 @@ import {
 } from "@/lib/map-detection";
 import fs from "fs";
 import path from "path";
+import { writeGeneratedMapSvg } from "@/lib/generated-maps";
+import { readLimitedRequestText } from "@/lib/request-body";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -26,6 +28,20 @@ interface IndexEntry {
   summary: string;
 }
 
+interface MapPhaseMetadata {
+  index: number;
+  name: string;
+  timing?: string;
+  type?: string;
+  description?: string;
+}
+
+interface GeneratedMapImage {
+  url: string;
+  map: string;
+  phases?: MapPhaseMetadata[];
+}
+
 const RAW_DIR = process.env.RAW_DIR || path.join(process.env.DATA_DIR || "/data", "sources");
 const INDEX_PATH = process.env.CATEGORY_INDEX_PATH || path.join(process.env.DATA_DIR || "/data", "full-index.json");
 const LLM_MODEL = process.env.LLM_MODEL || "deepseek-v4-flash";
@@ -33,6 +49,7 @@ const MAX_CHAT_BODY_CHARS = 40_000;
 const MAX_CHAT_MESSAGES = 12;
 const MAX_MESSAGE_CHARS = 8_000;
 const MAX_TOTAL_MESSAGE_CHARS = 30_000;
+const TACTICAL_SANITIZER_TAIL_CHARS = 32_000;
 
 let fileIndexCache: { entries: IndexEntry[]; timestamp: number } | null = null;
 
@@ -218,6 +235,127 @@ function parseChatRequest(rawBody: string): { messages?: ChatMessage[]; error?: 
   return { messages };
 }
 
+function looksLikeTacticalJson(value: string): boolean {
+  const lower = value.toLowerCase();
+  return (
+    /"map"\s*:/.test(lower) &&
+    /"players"\s*:/.test(lower) &&
+    (/"utility"\s*:/.test(lower) || /"arrows"\s*:/.test(lower) || /"phases"\s*:/.test(lower))
+  );
+}
+
+function findBalancedJsonEnd(text: string, startIndex: number): number {
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+
+  for (let index = startIndex; index < text.length; index++) {
+    const ch = text[index];
+    if (escape) {
+      escape = false;
+      continue;
+    }
+    if (ch === "\\" && inString) {
+      escape = true;
+      continue;
+    }
+    if (ch === '"') {
+      inString = !inString;
+      continue;
+    }
+    if (inString) continue;
+    if (ch === "{") depth++;
+    if (ch === "}") {
+      depth--;
+      if (depth === 0) return index;
+    }
+  }
+
+  return -1;
+}
+
+function stripInlineTacticalJson(content: string): string {
+  let output = "";
+  let index = 0;
+
+  while (index < content.length) {
+    if (content[index] !== "{") {
+      output += content[index];
+      index++;
+      continue;
+    }
+
+    const end = findBalancedJsonEnd(content, index);
+    if (end === -1) {
+      output += content.slice(index);
+      break;
+    }
+
+    const candidate = content.slice(index, end + 1);
+    if (looksLikeTacticalJson(candidate)) {
+      index = end + 1;
+      continue;
+    }
+
+    output += candidate;
+    index = end + 1;
+  }
+
+  return output;
+}
+
+function stripTacticalJson(content: string): string {
+  const withoutFences = content.replace(
+    /```([a-z0-9_-]*)[^\n]*\n([\s\S]*?)```/gi,
+    (match, language: string, body: string) => {
+      const lang = language.toLowerCase();
+      if (lang === "tactical") return "";
+      if ((lang === "json" || lang === "") && looksLikeTacticalJson(body)) return "";
+      return match;
+    }
+  );
+
+  return stripInlineTacticalJson(withoutFences).replace(/\n{3,}/g, "\n\n");
+}
+
+function sanitizeStreamBuffer(
+  buffer: string,
+  final = false
+): { emit: string; remainder: string } {
+  const sanitized = stripTacticalJson(buffer);
+  if (final) return { emit: sanitized, remainder: "" };
+  if (sanitized.length <= TACTICAL_SANITIZER_TAIL_CHARS) {
+    return { emit: "", remainder: sanitized };
+  }
+
+  const emitLength = sanitized.length - TACTICAL_SANITIZER_TAIL_CHARS;
+  return {
+    emit: sanitized.slice(0, emitLength),
+    remainder: sanitized.slice(emitLength),
+  };
+}
+
+function phaseTypeFromName(name: string): string {
+  const lower = name.toLowerCase();
+  if (/retake|reprise|defuse/.test(lower)) return "retake";
+  if (/post[-\s]?plant|after\s+plant/.test(lower)) return "post-plant";
+  if (/execute|exec|commit|pop|contact/.test(lower)) return "execute";
+  if (/map\s*control|control|default|mid[-\s]?round/.test(lower)) return "map-control";
+  if (/rotate|rotation|fallback|regroup/.test(lower)) return "rotation";
+  if (/opening|spawn|start|initial|0:00/.test(lower)) return "opening";
+  return "custom";
+}
+
+function getPhaseMetadata(tactical: TacticalData): MapPhaseMetadata[] {
+  return (tactical.phases || []).slice(0, 8).map((phase, index) => ({
+    index,
+    name: phase.name,
+    timing: phase.timing,
+    type: phaseTypeFromName(phase.name),
+    description: phase.description,
+  }));
+}
+
 function repairCandidate(
   tactical: TacticalData | null,
   mapName: string,
@@ -233,7 +371,16 @@ function repairCandidate(
 
 export async function POST(request: NextRequest) {
   try {
-    const parsedRequest = parseChatRequest(await request.text());
+    const rawRequest = await readLimitedRequestText(
+      request,
+      MAX_CHAT_BODY_CHARS,
+      "Chat request body is too large"
+    );
+    if (rawRequest.error) {
+      return NextResponse.json({ error: rawRequest.error }, { status: rawRequest.status || 400 });
+    }
+
+    const parsedRequest = parseChatRequest(rawRequest.text || "");
     if (!parsedRequest.messages) {
       return NextResponse.json(
         { error: parsedRequest.error || "Invalid chat request" },
@@ -273,6 +420,7 @@ export async function POST(request: NextRequest) {
     const llmMessages: ChatMessage[] = [systemMessage, ...messages];
 
     let fullResponse = "";
+    let visibleBuffer = "";
     const chatId = `chat_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
     const encoder = new TextEncoder();
@@ -285,13 +433,26 @@ export async function POST(request: NextRequest) {
           for await (const chunk of streamChat(llmMessages)) {
             if (closed) return;
             fullResponse += chunk;
-            const data = JSON.stringify({ content: chunk });
-            controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+            visibleBuffer += chunk;
+            const sanitizedChunk = sanitizeStreamBuffer(visibleBuffer);
+            visibleBuffer = sanitizedChunk.remainder;
+            if (sanitizedChunk.emit) {
+              const data = JSON.stringify({ content: sanitizedChunk.emit });
+              controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+            }
           }
 
           if (!closed) {
+            const finalVisibleChunk = sanitizeStreamBuffer(visibleBuffer, true).emit;
+            visibleBuffer = "";
+            if (finalVisibleChunk) {
+              const data = JSON.stringify({ content: finalVisibleChunk });
+              controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+            }
+            const safeFullResponse = stripTacticalJson(fullResponse).trim();
+
             // After streaming, extract tactical data from the LLM response and generate map
-            let finalMapImage: { url: string; map: string } | undefined;
+            let finalMapImage: GeneratedMapImage | undefined;
             try {
               let tactical: TacticalData | null = null;
 
@@ -343,7 +504,7 @@ export async function POST(request: NextRequest) {
             closed = true;
 
             // Save to DB
-            saveChatHistory(chatId, question, fullResponse, sources, finalMapImage);
+            saveChatHistory(chatId, question, safeFullResponse, sources, finalMapImage);
           }
         } catch (error) {
           console.error("[chat] Stream error:", error);
@@ -361,7 +522,12 @@ export async function POST(request: NextRequest) {
             closed = true;
 
             if (fullResponse) {
-              saveChatHistory(chatId, question, fullResponse + "\n\n⚠️ *Response was cut short due to an error.*", sources);
+              saveChatHistory(
+                chatId,
+                question,
+                `${stripTacticalJson(fullResponse).trim()}\n\n⚠️ *Response was cut short due to an error.*`,
+                sources
+              );
             }
           }
         }
@@ -369,7 +535,7 @@ export async function POST(request: NextRequest) {
       cancel() {
         closed = true;
         if (fullResponse) {
-          saveChatHistory(chatId, question, fullResponse, sources);
+          saveChatHistory(chatId, question, stripTacticalJson(fullResponse).trim(), sources);
         }
       },
     });
@@ -392,7 +558,7 @@ function saveChatHistory(
   question: string,
   answer: string,
   sources: string[],
-  mapImage?: { url: string; map: string }
+  mapImage?: GeneratedMapImage
 ) {
   try {
     const db = getDb();
@@ -419,7 +585,7 @@ function saveChatHistory(
  */
 async function generateTacticalMap(
   tactical: TacticalData
-): Promise<{ url: string; map: string } | null> {
+): Promise<GeneratedMapImage | null> {
   try {
     // HIGH-1 fix: Validate map name against allowlist
     const { MAP_NAMES } = await import("@/lib/map-detection");
@@ -437,11 +603,6 @@ async function generateTacticalMap(
       tactical.arrows = tactical.arrows.slice(0, 50);
     }
 
-    const outputDir = path.join(process.cwd(), "public", "generated-maps");
-    if (!fs.existsSync(outputDir)) {
-      fs.mkdirSync(outputDir, { recursive: true });
-    }
-
     // Try the map renderer module directly (no HTTP self-fetch)
     let svg: string;
     try {
@@ -457,14 +618,10 @@ async function generateTacticalMap(
       return null;
     }
 
-    // Save the SVG with sanitized filename
-    const timestamp = Date.now();
-    const safeMapName = tactical.map.replace(/[^a-z0-9]/g, "");
-    const filename = `${safeMapName}-${timestamp}.svg`;
-    const filePath = path.join(outputDir, filename);
-    fs.writeFileSync(filePath, svg, "utf-8");
+    const generatedMap = writeGeneratedMapSvg(tactical.map, svg);
+    if (!generatedMap) return null;
 
-    return { url: `/api/generated-maps/${filename}`, map: tactical.map };
+    return { url: generatedMap.url, map: tactical.map, phases: getPhaseMetadata(tactical) };
   } catch (error) {
     console.error("[chat] Error generating tactical map:", error);
     return null;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 
 /* -------------------------------------------------------------------------- */
 /*  Types                                                                     */
@@ -9,7 +9,16 @@ import { useState, useEffect, useRef, useCallback } from "react";
 interface TacticalMapProps {
   svgUrl: string;
   mapName: string;
+  phases?: PhaseControlData[];
   onClose?: () => void;
+}
+
+interface PhaseControlData {
+  index: number;
+  name: string;
+  timing?: string;
+  type?: string;
+  description?: string;
 }
 
 interface LayerVisibility {
@@ -31,6 +40,8 @@ interface SvgLoadState {
   content: string;
   error: string | null;
 }
+
+type PhaseSelection = "all" | number;
 
 /* -------------------------------------------------------------------------- */
 /*  Constants                                                                 */
@@ -54,6 +65,50 @@ const UTILITY_TYPE_MAP: Record<string, string> = {
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 3;
 const ZOOM_STEP = 0.25;
+
+function normalizePhaseControls(phases: PhaseControlData[] | undefined): PhaseControlData[] {
+  const seen = new Set<number>();
+  return (phases || [])
+    .filter((phase) => Number.isInteger(phase.index) && phase.index >= 0 && phase.name.trim().length > 0)
+    .sort((a, b) => a.index - b.index)
+    .filter((phase) => {
+      if (seen.has(phase.index)) return false;
+      seen.add(phase.index);
+      return true;
+    })
+    .slice(0, 8);
+}
+
+function decodeXmlAttr(value: string): string {
+  return value
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&");
+}
+
+function extractPhaseControlsFromContent(svg: string): PhaseControlData[] {
+  const phases = new Map<number, PhaseControlData>();
+  const phasePattern = /data-tm-phase-index="(\d+)"[^>]*data-tm-phase-name="([^"]+)"(?:[^>]*data-tm-phase-type="([^"]*)")?/g;
+  let match: RegExpExecArray | null;
+
+  while ((match = phasePattern.exec(svg)) !== null) {
+    const rawIndex = match[1];
+    const name = decodeXmlAttr(match[2] || "");
+    const index = Number.parseInt(rawIndex || "", 10);
+    if (!Number.isInteger(index) || index < 0 || name.trim().length === 0) continue;
+    if (!phases.has(index)) {
+      phases.set(index, {
+        index,
+        name,
+        type: match[3] ? decodeXmlAttr(match[3]) : undefined,
+      });
+    }
+  }
+
+  return normalizePhaseControls(Array.from(phases.values()));
+}
 
 /* -------------------------------------------------------------------------- */
 /*  SVG Annotation – walk DOM and tag interactive elements                    */
@@ -213,7 +268,8 @@ function annotateSvg(svgEl: SVGSVGElement) {
 
 function applyLayerVisibility(
   svgEl: SVGSVGElement,
-  layers: LayerVisibility
+  layers: LayerVisibility,
+  selectedPhase: PhaseSelection
 ) {
   const typed = svgEl.querySelectorAll("[data-tm-type]");
   typed.forEach((el) => {
@@ -238,6 +294,14 @@ function applyLayerVisibility(
       default:
         visible = true;
     }
+
+    const phaseIndex = el.getAttribute("data-tm-phase-index");
+    const phaseTagged = phaseIndex !== null;
+    const filterableType = type === "player" || type === "utility" || type === "arrow" || type === "timing";
+    if (visible && selectedPhase !== "all" && filterableType && phaseTagged) {
+      visible = Number.parseInt(phaseIndex, 10) === selectedPhase;
+    }
+
     (el as HTMLElement).style.visibility = visible ? "visible" : "hidden";
     (el as HTMLElement).style.pointerEvents = visible ? "auto" : "none";
   });
@@ -247,7 +311,7 @@ function applyLayerVisibility(
 /*  Component                                                                 */
 /* -------------------------------------------------------------------------- */
 
-export default function TacticalMap({ svgUrl, mapName, onClose }: TacticalMapProps) {
+export default function TacticalMap({ svgUrl, mapName, phases, onClose }: TacticalMapProps) {
   /* ── State ─────────────────────────────────────────────────────────── */
   const [svgState, setSvgState] = useState<SvgLoadState>({
     url: "",
@@ -267,6 +331,7 @@ export default function TacticalMap({ svgUrl, mapName, onClose }: TacticalMapPro
   const [isMinimized, setIsMinimized] = useState(false);
   const [isPanning, setIsPanning] = useState(false);
   const [tooltip, setTooltip] = useState<TooltipData | null>(null);
+  const [selectedPhase, setSelectedPhase] = useState<PhaseSelection>("all");
 
   /* ── Refs ──────────────────────────────────────────────────────────── */
   const containerRef = useRef<HTMLDivElement>(null);
@@ -315,6 +380,13 @@ export default function TacticalMap({ svgUrl, mapName, onClose }: TacticalMapPro
   const svgContent = svgState.url === svgUrl ? svgState.content : "";
   const error = svgState.url === svgUrl ? svgState.error : null;
   const loading = !svgContent && !error;
+  const propPhases = useMemo(() => normalizePhaseControls(phases), [phases]);
+  const svgPhases = useMemo(() => extractPhaseControlsFromContent(svgContent), [svgContent]);
+  const availablePhases = propPhases.length > 0 ? propPhases : svgPhases;
+  const activeSelectedPhase: PhaseSelection =
+    selectedPhase === "all" || availablePhases.some((phase) => phase.index === selectedPhase)
+      ? selectedPhase
+      : "all";
 
   /* ── Annotate SVG after injection ──────────────────────────────────── */
   useEffect(() => {
@@ -335,8 +407,8 @@ export default function TacticalMap({ svgUrl, mapName, onClose }: TacticalMapPro
     if (!svgRef.current) return;
     const svgEl = svgRef.current.querySelector("svg");
     if (!svgEl) return;
-    applyLayerVisibility(svgEl, layers);
-  }, [layers, svgContent, isMinimized]);
+    applyLayerVisibility(svgEl, layers, activeSelectedPhase);
+  }, [layers, svgContent, isMinimized, activeSelectedPhase]);
 
   /* ── Clamp pan to keep SVG visible ─────────────────────────────────── */
   const clampPan = useCallback((p: { x: number; y: number }, z: number, containerW: number, containerH: number) => {
@@ -585,6 +657,18 @@ export default function TacticalMap({ svgUrl, mapName, onClose }: TacticalMapPro
     </button>
   );
 
+  const phaseBtn = (phase: PhaseControlData) => (
+    <button
+      key={phase.index}
+      onClick={() => setSelectedPhase(phase.index)}
+      className={`tm-phase-btn ${activeSelectedPhase === phase.index ? "tm-phase-btn-active" : ""}`}
+      title={phase.description || phase.timing || phase.name}
+    >
+      <span className="tm-phase-number">{phase.index + 1}</span>
+      <span className="tm-phase-name">{phase.name}</span>
+    </button>
+  );
+
   return (
     <div
       ref={containerRef}
@@ -650,14 +734,26 @@ export default function TacticalMap({ svgUrl, mapName, onClose }: TacticalMapPro
         {onClose && (
           <button
             onClick={onClose}
-            className="tm-toolbar-btn"
-            style={{ color: "#EF5350" }}
+            className="tm-toolbar-btn tm-toolbar-btn-danger"
             title="Close map"
           >
             ✕
           </button>
         )}
       </div>
+
+      {availablePhases.length > 0 && !isMinimized && (
+        <div className="tm-phase-strip" aria-label="Tactical phase filter">
+          <button
+            onClick={() => setSelectedPhase("all")}
+            className={`tm-phase-btn tm-phase-btn-all ${activeSelectedPhase === "all" ? "tm-phase-btn-active" : ""}`}
+            title="Show every tactical phase"
+          >
+            All phases
+          </button>
+          {availablePhases.map(phaseBtn)}
+        </div>
+      )}
 
       {/* ── SVG Container ────────────────────────────────────────── */}
       {isMinimized && !isFullscreen ? (

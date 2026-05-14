@@ -113,13 +113,20 @@
 
 /* Wrapper */
 .tm-wrapper {
+  --tm-bg: var(--color-surface-card);
+  --tm-panel: color-mix(in srgb, var(--color-surface) 78%, black);
+  --tm-border: var(--color-surface-border);
+  --tm-muted: var(--color-gray-400, #9ca3af);
+  --tm-text: var(--color-gray-100, #f3f4f6);
+  --tm-accent: var(--color-accent-purple);
+  --tm-accent-hot: var(--color-accent-orange-light);
   position: relative;
-  background: #1a1a2e;
-  border-radius: 12px;
-  border: 1px solid rgba(255,255,255,0.1);
+  background: var(--tm-bg);
+  border-radius: 0.75rem;
+  border: 1px solid var(--tm-border);
   overflow: hidden;
-  margin-top: 8px;
-  font-family: sans-serif;
+  margin-top: 0.5rem;
+  font-family: var(--font-family-mono);
   width: 100%;
 }
 .tm-fullscreen {
@@ -141,10 +148,10 @@
 .tm-toolbar {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 6px 10px;
-  background: rgba(0,0,0,0.5);
-  border-bottom: 1px solid rgba(255,255,255,0.08);
+  gap: 0.25rem;
+  padding: 0.375rem 0.625rem;
+  background: color-mix(in srgb, var(--tm-panel) 88%, transparent);
+  border-bottom: 1px solid var(--tm-border);
   flex-wrap: wrap;
 }
 .tm-fullscreen .tm-toolbar {
@@ -155,47 +162,101 @@
 }
 
 .tm-toolbar-btn {
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.12);
-  border-radius: 6px;
-  color: #ccc;
+  background: color-mix(in srgb, var(--tm-text) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--tm-text) 12%, transparent);
+  border-radius: 0.375rem;
+  color: var(--tm-muted);
   cursor: pointer;
-  font-size: 12px;
-  padding: 4px 8px;
-  line-height: 18px;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  line-height: 1.125rem;
   transition: all 0.15s ease;
   user-select: none;
   touch-action: manipulation;
 }
 .tm-toolbar-btn:hover {
-  background: rgba(255,255,255,0.15);
+  background: color-mix(in srgb, var(--tm-text) 15%, transparent);
 }
 .tm-toolbar-btn-active {
-  background: rgba(124,77,255,0.3) !important;
-  border-color: rgba(124,77,255,0.5) !important;
-  color: #fff !important;
+  background: color-mix(in srgb, var(--tm-accent) 26%, transparent) !important;
+  border-color: color-mix(in srgb, var(--tm-accent-hot) 55%, transparent) !important;
+  color: var(--tm-text) !important;
+}
+.tm-toolbar-btn-danger {
+  color: var(--color-red-400, #f87171);
 }
 
 .tm-title {
-  color: #eee;
-  font-size: 13px;
+  color: var(--tm-text);
+  font-size: 0.8125rem;
   font-weight: 600;
-  margin-right: 8px;
+  margin-right: 0.5rem;
   text-transform: capitalize;
   white-space: nowrap;
 }
 .tm-sep {
   width: 1px;
-  height: 18px;
-  background: rgba(255,255,255,0.12);
-  margin: 0 4px;
+  height: 1.125rem;
+  background: color-mix(in srgb, var(--tm-text) 12%, transparent);
+  margin: 0 0.25rem;
 }
 .tm-spacer { flex: 1; }
 .tm-zoom-label {
-  color: #aaa;
-  font-size: 11px;
-  min-width: 32px;
+  color: var(--tm-muted);
+  font-size: 0.6875rem;
+  min-width: 2rem;
   text-align: center;
+}
+
+.tm-phase-strip {
+  display: flex;
+  gap: 0.375rem;
+  align-items: center;
+  overflow-x: auto;
+  padding: 0.5rem 0.625rem;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--tm-accent) 14%, transparent), transparent 55%), var(--tm-panel);
+  border-bottom: 1px solid var(--tm-border);
+}
+.tm-phase-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-height: 1.875rem;
+  padding: 0.25rem 0.625rem;
+  border-radius: 9999px;
+  border: 1px solid color-mix(in srgb, var(--tm-text) 12%, transparent);
+  background: color-mix(in srgb, var(--tm-text) 7%, transparent);
+  color: var(--tm-muted);
+  font-size: 0.6875rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transition: all 160ms ease;
+}
+.tm-phase-btn:hover {
+  color: var(--tm-text);
+  border-color: color-mix(in srgb, var(--tm-accent-hot) 45%, transparent);
+}
+.tm-phase-btn-active {
+  color: var(--tm-text);
+  background: color-mix(in srgb, var(--tm-accent) 30%, transparent);
+  border-color: color-mix(in srgb, var(--tm-accent-hot) 65%, transparent);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--tm-accent) 22%, transparent);
+}
+.tm-phase-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.125rem;
+  height: 1.125rem;
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--tm-accent-hot) 20%, transparent);
+  color: var(--tm-accent-hot);
+}
+.tm-phase-btn-active .tm-phase-number {
+  background: var(--tm-accent-hot);
+  color: var(--color-surface);
 }
 
 /* SVG container */
@@ -205,7 +266,7 @@
   overflow: hidden;
   cursor: default;
   position: relative;
-  background: #1a1a2e;
+  background: var(--tm-bg);
   touch-action: none;
 }
 .tm-svg-fullscreen {
@@ -291,6 +352,13 @@
   .tm-toolbar-btn {
     font-size: 11px;
     padding: 3px 6px;
+  }
+  .tm-phase-strip {
+    padding: 0.375rem 0.5rem;
+  }
+  .tm-phase-btn {
+    font-size: 0.625rem;
+    padding: 0.1875rem 0.5rem;
   }
   .tm-title {
     font-size: 11px;

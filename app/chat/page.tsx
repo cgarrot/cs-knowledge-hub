@@ -244,18 +244,24 @@ function ChatContent() {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)]">
+    <div className="flex flex-col h-[calc(100vh-4rem)] bg-[#0a0d12]/30">
       {/* Chat Header */}
-      <div className="border-b border-surface-border px-6 py-3 flex items-center gap-3">
-        <span className="text-2xl">🤖</span>
+      <div className="border-b border-surface-border px-4 md:px-6 py-3 flex items-center gap-3 bg-[#0a0d12]/60 backdrop-blur-sm">
+        <span className="text-xl" aria-hidden>
+          🎯
+        </span>
         <div>
-          <h1 className="font-semibold text-gray-100">CS Knowledge Assistant</h1>
-          <p className="text-xs text-gray-500">Powered by RAG + DeepSeek</p>
+          <h1 className="font-black uppercase tracking-wide text-gray-100 text-sm md:text-base">
+            Tactical briefing
+          </h1>
+          <p className="text-[10px] md:text-xs font-semibold uppercase tracking-wider text-accent-purple/80">
+            RAG + DeepSeek · CS2 knowledge base
+          </p>
         </div>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4 md:px-6">
+      <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4 md:px-6 bg-gradient-to-b from-transparent to-[#080b0f]/80">
         {messages.map((msg, i) => (
           <div key={i}>
             <div
@@ -264,8 +270,8 @@ function ChatContent() {
               <div
                 className={`max-w-3xl rounded-2xl px-5 py-3 ${
                   msg.role === "user"
-                    ? "bg-accent-purple/20 border border-accent-purple/30 text-gray-100"
-                    : "bg-surface-card border border-surface-border text-gray-200"
+                    ? "bg-accent-purple/20 border border-accent-purple/40 text-gray-100 shadow-[inset_0_1px_0_rgba(255,152,0,0.08)]"
+                    : "bg-surface-card/90 backdrop-blur-sm border border-surface-border text-gray-200 shadow-[0_8px_30px_rgba(0,0,0,0.35)]"
                 }`}
               >
                 {msg.role === "user" ? (
@@ -292,8 +298,8 @@ function ChatContent() {
       </div>
 
       {/* Input */}
-      <div className="border-t border-surface-border p-4">
-        <form onSubmit={handleSubmit} className="max-w-4xl mx-auto flex gap-3">
+      <div className="border-t border-surface-border p-4 bg-[#080b0f]/90 backdrop-blur-md">
+        <form onSubmit={handleSubmit} className="max-w-4xl mx-auto flex gap-3 items-end">
           <textarea
             ref={inputRef}
             value={input}
@@ -306,17 +312,17 @@ function ChatContent() {
             }}
             placeholder="Ask about CS2 strategy, aim, maps, economy..."
             rows={1}
-            className="flex-1 px-4 py-3 bg-surface-card border border-surface-border rounded-xl
-                       text-gray-100 placeholder-gray-500 resize-none
-                       focus:outline-none focus:border-accent-purple/50 focus:ring-2 focus:ring-accent-purple/20
+            className="flex-1 px-4 py-3 bg-[#050708] border border-surface-border rounded-xl
+                       text-gray-100 placeholder-gray-600 resize-none shadow-inner
+                       focus:outline-none focus:border-accent-purple/55 focus:ring-2 focus:ring-accent-purple/22
                        transition-all duration-200"
           />
           <button
             type="submit"
             disabled={isLoading || !input.trim()}
-            className="px-6 py-3 bg-accent-purple rounded-xl font-semibold text-white
-                       hover:bg-accent-purple-light disabled:opacity-50 disabled:cursor-not-allowed
-                       transition-all duration-200"
+            className="px-6 py-3 min-h-[48px] rounded-xl font-bold uppercase tracking-wide text-[#0d1117] bg-gradient-to-r from-accent-purple to-accent-orange
+                       hover:from-accent-purple-light hover:to-accent-orange-light disabled:opacity-50 disabled:cursor-not-allowed
+                       transition-all duration-200 shadow-[0_0_24px_rgba(222,155,53,0.25)]"
           >
             {isLoading ? "..." : "Send"}
           </button>

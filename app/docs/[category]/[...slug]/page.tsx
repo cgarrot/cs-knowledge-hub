@@ -135,7 +135,7 @@ export default async function DocPage({ params }: PageProps) {
           </div>
         </header>
 
-        <div className="prose prose-invert prose-purple max-w-none">
+        <div className="prose prose-invert max-w-none prose-headings:text-gray-100 prose-a:text-accent-purple-light">
           <div className="whitespace-pre-wrap text-gray-300 leading-relaxed">
             {displayContent}
           </div>

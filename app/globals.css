@@ -1,31 +1,39 @@
-@import "tailwindcss";
-
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
+@import "tailwindcss";
+
 @theme {
-  --color-accent-purple: #a855f7;
-  --color-accent-purple-light: #c084fc;
-  --color-accent-purple-dark: #7c3aed;
-  --color-accent-orange: #f97316;
-  --color-accent-orange-light: #fb923c;
-  --color-accent-orange-dark: #ea580c;
-  --color-surface: #0f0f1a;
-  --color-surface-card: #1a1a2e;
-  --color-surface-hover: #252542;
-  --color-surface-border: #2a2a4a;
+  /* Legacy token names kept so accent-purple utility classes stay valid — values are CS2 amber/gold */
+  --color-accent-purple: #de9b35;
+  --color-accent-purple-light: #ff9800;
+  --color-accent-purple-dark: #b87a28;
+  --color-accent-orange: #ff9800;
+  --color-accent-orange-light: #ffb347;
+  --color-accent-orange-dark: #c2410c;
+  --color-surface: #0d1117;
+  --color-surface-card: #161b22;
+  --color-surface-hover: #21262d;
+  --color-surface-border: #30363d;
   --font-family-mono: "JetBrains Mono", "Fira Code", monospace;
   --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-  --animate-glow: glow 2s ease-in-out infinite alternate;
+  --animate-glow: glow 2.5s ease-in-out infinite alternate;
+  --animate-shimmer-bg: shimmer-bg 14s ease-in-out infinite;
 
   @keyframes glow {
-    0% { box-shadow: 0 0 5px rgba(168, 85, 247, 0.4); }
-    100% { box-shadow: 0 0 20px rgba(168, 85, 247, 0.8); }
+    0% { box-shadow: 0 0 6px rgba(222, 155, 53, 0.35); }
+    100% { box-shadow: 0 0 18px rgba(222, 155, 53, 0.65); }
+  }
+
+  @keyframes shimmer-bg {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 0.7; }
   }
 }
 
 @layer base {
   body {
     background-color: var(--color-surface);
+    background-image: radial-gradient(ellipse 70% 45% at 50% -15%, rgba(222, 155, 53, 0.07), transparent);
     color: var(--color-gray-100, #f3f4f6);
   }
 
@@ -41,11 +49,11 @@
     background-color: var(--color-surface);
   }
   ::-webkit-scrollbar-thumb {
-    background-color: var(--color-surface-border);
+    background-color: color-mix(in srgb, var(--color-accent-purple) 55%, #30363d);
     border-radius: 9999px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background-color: color-mix(in srgb, var(--color-accent-purple) 50%, transparent);
+    background-color: color-mix(in srgb, var(--color-accent-purple-light) 70%, transparent);
   }
 }
 
@@ -59,7 +67,7 @@
     border-radius: 0.75rem;
     opacity: 0;
     transition: opacity 300ms;
-    background: radial-gradient(600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(168, 85, 247, 0.1), transparent 40%);
+    background: radial-gradient(600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(222, 155, 53, 0.12), transparent 40%);
   }
   &:hover::before {
     opacity: 1;
@@ -67,7 +75,7 @@
 }
 
 @utility gradient-text {
-  background-image: linear-gradient(to right, var(--color-accent-purple), var(--color-accent-orange));
+  background-image: linear-gradient(115deg, var(--color-accent-purple) 0%, var(--color-accent-orange) 45%, #ffb347 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -75,14 +83,14 @@
 
 @utility btn-primary {
   padding: 0.75rem 1.5rem;
-  background-image: linear-gradient(to right, var(--color-accent-purple), var(--color-accent-purple-dark));
+  background-image: linear-gradient(to right, var(--color-accent-purple-dark), var(--color-accent-purple), var(--color-accent-orange));
   border-radius: 0.5rem;
   font-weight: 600;
   transition: all 200ms;
-  box-shadow: 0 10px 15px -3px color-mix(in srgb, var(--color-accent-purple) 20%, transparent);
+  box-shadow: 0 10px 15px -3px color-mix(in srgb, var(--color-accent-purple) 28%, transparent);
   &:hover {
-    background-image: linear-gradient(to right, var(--color-accent-purple-light), var(--color-accent-purple));
-    box-shadow: 0 10px 15px -3px color-mix(in srgb, var(--color-accent-purple) 40%, transparent);
+    background-image: linear-gradient(to right, var(--color-accent-purple), var(--color-accent-orange), var(--color-accent-orange-light));
+    box-shadow: 0 10px 20px -3px color-mix(in srgb, var(--color-accent-orange) 35%, transparent);
   }
 }
 
@@ -93,8 +101,9 @@
   color: var(--color-gray-300, #d1d5db);
   transition: all 200ms;
   &:hover {
-    border-color: color-mix(in srgb, var(--color-accent-purple) 50%, transparent);
+    border-color: color-mix(in srgb, var(--color-accent-purple) 45%, transparent);
     color: var(--color-accent-purple-light);
+    background-color: color-mix(in srgb, var(--color-accent-purple) 6%, transparent);
   }
 }
 
